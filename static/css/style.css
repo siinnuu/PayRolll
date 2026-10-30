@@ -370,3 +370,59 @@ footer {
     display: block;
   }
 }
+
+/* Desktop Sidebar Collapsed State */
+@media (min-width: 992px) {
+  .app-sidebar.collapsed {
+    width: 72px;
+  }
+  .app-sidebar.collapsed .brand-text,
+  .app-sidebar.collapsed .nav-section-title,
+  .app-sidebar.collapsed .sidebar-link span,
+  .app-sidebar.collapsed .sidebar-footer .text-truncate {
+    display: none !important;
+  }
+  .app-sidebar.collapsed .sidebar-link {
+    justify-content: center;
+    padding: 0.75rem;
+  }
+  .app-sidebar.collapsed .sidebar-link i {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+  .app-sidebar.collapsed .sidebar-header {
+    justify-content: center !important;
+    padding: 1.25rem 0.5rem;
+  }
+}
+
+/* Print Media Styles - Clean Salary Slip Printouts */
+@media print {
+  .app-sidebar,
+  .navbar-custom,
+  .sidebar-backdrop,
+  footer,
+  #appFooter,
+  .no-print,
+  .btn,
+  .dropdown,
+  .breadcrumb,
+  #theme-toggle-btn {
+    display: none !important;
+  }
+  .app-layout {
+    display: block !important;
+  }
+  .app-main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .card, .glass-card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+  }
+}

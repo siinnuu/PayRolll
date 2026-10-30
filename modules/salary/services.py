@@ -83,11 +83,12 @@ class SalaryCalculationResult:
     allow_negative_net: bool
     reproducible_inputs: Dict[str, Any]
     formula_explanations: Dict[str, str]
+    leave_deduction_method: str = "A"
+    daily_deduction_percentage: Decimal = Decimal("0.00")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert dataclass to a serializable dictionary."""
         data = asdict(self)
-        # Convert Decimals to string or float for JSON serialization if needed
         return data
 
 
@@ -165,36 +166,25 @@ class SalaryCalculationEngine:
         other_deductions: Union[Decimal, str, int],
         paid_leave_days: Union[Decimal, str, int] = Decimal("0.0"),
         allow_negative_net: bool = False,
+        leave_deduction_method: str = "A",
+        daily_deduction_percentage: Union[Decimal, str, int] = Decimal("0.00"),
     ) -> SalaryCalculationResult:
         """
         Execute reproducible monthly salary calculation according to configured rules:
         
-        1. Daily salary = Basic monthly salary / Total working days in payroll month.
-        2. Leave deduction = Daily salary * Unpaid leave days.
-        3. Overtime payment = Overtime hours * Overtime rate.
-        4. Gross salary = Basic salary + Allowances + Overtime payment.
-        5. Total deductions = Leave deduction + Other deductions.
-        6. Net salary = Gross salary - Total deductions.
-        
-        Args:
-            basic_salary: Basic monthly salary (>= 0).
-            total_working_days: Configured business days in month (> 0).
-            unpaid_leave_days: Unpaid leave days (LWP) (>= 0).
-            allowances: Total monthly allowances (HRA, transport, medical, etc.) (>= 0).
-            overtime_hours: Reconciled overtime hours (>= 0).
-            overtime_rate: Overtime rate per hour (>= 0).
-            other_deductions: Other monthly deductions (>= 0).
-            paid_leave_days: Approved paid leave days (>= 0, no salary deducted).
-            allow_negative_net: If True, permits deductions to exceed gross salary (deficit).
+        Method A (Daily-rate calculation):
+            Daily rate = Basic monthly salary / Total working days
+            Leave deduction = Daily rate * Unpaid leave days
             
-        Returns:
-            SalaryCalculationResult object containing step-by-step verified computation.
+        Method B (Percentage-based calculation):
+            Daily leave deduction = Basic monthly salary * Configured daily deduction percentage / 100
+            Total leave deduction = Daily leave deduction * Unpaid leave days
             
-        Raises:
-            ZeroWorkingDaysError: If total_working_days <= 0.
-            MissingSalaryInputError: If any required input is None or blank.
-            InvalidSalaryValueError: If any input is negative or non-numeric.
-            DeductionExceedsGrossError: If total deductions > gross salary and allow_negative_net is False.
+        Statutory & Overtime additions:
+            Overtime payment = Overtime hours * Overtime rate
+            Gross salary = Basic salary + Allowances + Overtime payment
+            Total deductions = Leave deduction + Other deductions
+            Net salary = Gross salary - Total deductions
         """
         # 1. Strict Input Validation (No silent defaults)
         dec_basic = cls.to_decimal(basic_salary, "basic_salary", allow_zero=True)
@@ -224,28 +214,46 @@ class SalaryCalculationEngine:
 
         dec_working_days = Decimal(int_working_days)
 
-        # 2. Daily Salary Calculation
-        # Daily salary = Basic monthly salary / Total working days in the payroll month.
-        daily_salary = cls.round_currency(dec_basic / dec_working_days)
+        # 2. Configurable Unpaid Leave Deduction Method Calculation
+        method_normalized = str(leave_deduction_method).upper().strip()
+        if method_normalized in ("B", "PERCENTAGE"):
+            # Method B: Percentage-based calculation
+            dec_pct = cls.to_decimal(daily_deduction_percentage, "daily_deduction_percentage", allow_zero=True)
+            daily_salary = cls.round_currency(dec_basic * dec_pct / Decimal("100.00"))
+            leave_deduction = cls.round_currency(daily_salary * dec_unpaid_leaves)
+            method_key = "B"
+            method_name = "Method B: Percentage-based calculation"
+            leave_explanation = (
+                f"Method B (Percentage): Daily leave deduction = Basic ({dec_basic}) * {dec_pct}% / 100 = {daily_salary}. "
+                f"Total leave deduction = Daily deduction ({daily_salary}) * Unpaid leaves ({dec_unpaid_leaves}) = {leave_deduction} "
+                f"(Paid leaves={dec_paid_leaves} incur 0 deduction)"
+            )
+        else:
+            # Method A: Daily-rate calculation
+            daily_salary = cls.round_currency(dec_basic / dec_working_days)
+            leave_deduction = cls.round_currency(daily_salary * dec_unpaid_leaves)
+            dec_pct = Decimal("0.00")
+            method_key = "A"
+            method_name = "Method A: Daily-rate calculation"
+            leave_explanation = (
+                f"Method A (Daily Rate): Daily rate = Basic ({dec_basic}) / Working Days ({int_working_days}) = {daily_salary}. "
+                f"Total leave deduction = Daily rate ({daily_salary}) * Unpaid leaves ({dec_unpaid_leaves}) = {leave_deduction} "
+                f"(Paid leaves={dec_paid_leaves} incur 0 deduction)"
+            )
 
-        # 3. Leave Deduction Calculation
-        # Rule: Leave deduction = Daily salary * Unpaid leave days.
-        # Rule: Paid leave preserves full pay (zero deduction).
-        leave_deduction = cls.round_currency(daily_salary * dec_unpaid_leaves)
-
-        # 4. Overtime Payment Calculation
+        # 3. Overtime Payment Calculation
         # Overtime payment = Overtime hours * Overtime rate.
         overtime_payment = cls.round_currency(dec_ot_hours * dec_ot_rate)
 
-        # 5. Gross Salary Calculation
+        # 4. Gross Salary Calculation
         # Gross salary = Basic salary + Allowances + Overtime payment.
         gross_salary = cls.round_currency(dec_basic + dec_allowances + overtime_payment)
 
-        # 6. Total Deductions Calculation
+        # 5. Total Deductions Calculation
         # Total deductions = Leave deduction + Other deductions.
         total_deductions = cls.round_currency(leave_deduction + dec_other_deductions)
 
-        # 7. Net Salary & Deduction Threshold Guard
+        # 6. Net Salary & Deduction Threshold Guard
         # Net salary = Gross salary - Total deductions.
         net_salary = gross_salary - total_deductions
 
@@ -257,14 +265,15 @@ class SalaryCalculationEngine:
             )
 
         formula_explanations = {
-            "daily_salary": f"Basic ({dec_basic}) / Working Days ({int_working_days}) = {daily_salary}",
-            "leave_deduction": f"Daily Salary ({daily_salary}) * Unpaid Leaves ({dec_unpaid_leaves}) = {leave_deduction} (Paid leaves={dec_paid_leaves} incur 0 deduction)",
+            "leave_deduction_method": method_name,
+            "daily_salary": f"{daily_salary} ({'Daily rate from working days' if method_key == 'A' else f'{dec_pct}% of Basic'})",
+            "leave_deduction": leave_explanation,
             "overtime_payment": f"OT Hours ({dec_ot_hours}) * OT Rate ({dec_ot_rate}) = {overtime_payment}",
             "gross_salary": f"Basic ({dec_basic}) + Allowances ({dec_allowances}) + OT ({overtime_payment}) = {gross_salary}",
             "total_deductions": f"Leave Deduction ({leave_deduction}) + Other Deductions ({dec_other_deductions}) = {total_deductions}",
             "net_salary": f"Gross ({gross_salary}) - Total Deductions ({total_deductions}) = {net_salary}",
             "rounding_policy": "ROUND_HALF_UP applied at each monetary step to two decimal places (0.01)",
-            "disclaimer": "Academic demonstration calculation rules; not a statutory payroll compliance statement.",
+            "disclaimer": "Consistent Decimal monetary calculation conforming to Finance Manager policy.",
         }
 
         reproducible_inputs = {
@@ -277,6 +286,8 @@ class SalaryCalculationEngine:
             "overtime_rate": str(dec_ot_rate),
             "other_deductions": str(dec_other_deductions),
             "allow_negative_net": allow_negative_net,
+            "leave_deduction_method": method_key,
+            "daily_deduction_percentage": str(dec_pct),
         }
 
         return SalaryCalculationResult(
@@ -297,6 +308,8 @@ class SalaryCalculationEngine:
             allow_negative_net=allow_negative_net,
             reproducible_inputs=reproducible_inputs,
             formula_explanations=formula_explanations,
+            leave_deduction_method=method_key,
+            daily_deduction_percentage=dec_pct,
         )
 
 
@@ -398,7 +411,20 @@ class SalaryService:
             errors["other_deductions"] = "Other deductions must be a valid numeric amount."
             other_deductions = Decimal("0.00")
 
-        # 5. Effective Date
+        # 5. Unpaid Leave Deduction Method & Percentage
+        raw_method = str(form_data.get("leave_deduction_method", "A")).upper().strip()
+        leave_deduction_method = "B" if raw_method in ("B", "PERCENTAGE") else "A"
+
+        raw_pct = form_data.get("daily_deduction_percentage")
+        try:
+            daily_deduction_pct = Decimal(str(raw_pct).strip()) if raw_pct else Decimal("0.00")
+            if daily_deduction_pct < Decimal("0.00"):
+                errors["daily_deduction_percentage"] = "Daily deduction percentage cannot be negative."
+        except Exception:
+            errors["daily_deduction_percentage"] = "Daily deduction percentage must be a valid number."
+            daily_deduction_pct = Decimal("0.00")
+
+        # 6. Effective Date
         raw_effective = form_data.get("effective_from")
         if not raw_effective:
             effective_from = date.today()
@@ -419,8 +445,8 @@ class SalaryService:
             "transport_allowance": cleaned_allowances["transport_allowance"],
             "medical_allowance": cleaned_allowances["medical_allowance"],
             "other_allowances": cleaned_allowances["other_allowances"],
-            "tax_deduction_rate": Decimal("0.00"),
-            "pf_deduction_rate": Decimal("0.00"),
+            "tax_deduction_rate": daily_deduction_pct if leave_deduction_method == "B" else Decimal("0.00"),
+            "pf_deduction_rate": Decimal("1.00") if leave_deduction_method == "B" else Decimal("0.00"),
             "other_deductions": other_deductions,
             "effective_from": effective_from,
         }
@@ -438,18 +464,12 @@ class SalaryService:
         year: int,
         month: int,
         allow_negative_net: bool = False,
+        leave_deduction_method: Optional[str] = None,
+        daily_deduction_percentage: Optional[Union[Decimal, str, int]] = None,
     ) -> Dict[str, Any]:
         """
         Build an actual salary preview using real employee and attendance records from MySQL.
-        
-        Returns:
-            Dictionary containing:
-            - status: 'success' | 'missing_employee' | 'missing_salary_settings' | 'missing_attendance' | 'calculation_error'
-            - employee: profile dictionary
-            - salary_settings: configuration dictionary
-            - attendance: monthly attendance record dictionary
-            - calculation: SalaryCalculationResult (if successful)
-            - error_message: str (if failed)
+        Supports both Method A (Daily Rate) and Method B (Percentage-based) unpaid leave deductions.
         """
         # 1. Fetch Employee Record
         employee = self.employee_repo.get_by_id(employee_id)
@@ -496,8 +516,6 @@ class SalaryService:
             }
 
         # 4. Resolve Overtime Rate Precedence
-        # Rule: Overtime rate per hour, with employee-specific rate taking precedence when present.
-        # Check attendance overtime rate first, then salary settings hourly rate.
         attendance_ot_rate = Decimal(str(attendance.get("overtime_rate", "0.00") or "0.00"))
         employee_ot_rate = Decimal(str(salary_cfg.get("hourly_rate", "0.00") or "0.00"))
 
@@ -511,7 +529,22 @@ class SalaryService:
             effective_ot_rate = Decimal("0.00")
             ot_rate_source = "None configured (0.00)"
 
-        # 5. Sum monthly allowances
+        # 5. Resolve Unpaid Leave Deduction Method & Percentage
+        if leave_deduction_method:
+            effective_method = "B" if str(leave_deduction_method).upper() in ("B", "PERCENTAGE") else "A"
+        elif salary_cfg.get("pf_deduction_rate") == Decimal("1.00"):
+            effective_method = "B"
+        else:
+            effective_method = "A"
+
+        if daily_deduction_percentage is not None:
+            effective_pct = Decimal(str(daily_deduction_percentage).strip() or "0.00")
+        elif effective_method == "B":
+            effective_pct = Decimal(str(salary_cfg.get("tax_deduction_rate", "0.00") or "0.00"))
+        else:
+            effective_pct = Decimal("0.00")
+
+        # 6. Sum monthly allowances
         total_allowances = (
             Decimal(str(salary_cfg.get("hra", 0.00))) +
             Decimal(str(salary_cfg.get("transport_allowance", 0.00))) +
@@ -526,7 +559,7 @@ class SalaryService:
         overtime_hours = Decimal(str(attendance.get("overtime_hours", 0.00)))
         other_deductions = Decimal(str(salary_cfg.get("other_deductions", 0.00)))
 
-        # 6. Perform pure salary calculation
+        # 7. Perform pure salary calculation
         try:
             calc_result = self.engine.calculate_salary(
                 basic_salary=basic_salary,
@@ -538,6 +571,8 @@ class SalaryService:
                 other_deductions=other_deductions,
                 paid_leave_days=paid_leave_days,
                 allow_negative_net=allow_negative_net,
+                leave_deduction_method=effective_method,
+                daily_deduction_percentage=effective_pct,
             )
 
             return {
@@ -547,6 +582,8 @@ class SalaryService:
                 "attendance": attendance,
                 "calculation": calc_result,
                 "ot_rate_source": ot_rate_source,
+                "leave_deduction_method": effective_method,
+                "daily_deduction_percentage": effective_pct,
                 "error_message": None,
             }
         except SalaryCalculationError as err:
@@ -557,4 +594,6 @@ class SalaryService:
                 "salary_settings": salary_cfg,
                 "attendance": attendance,
                 "calculation": None,
+                "leave_deduction_method": effective_method,
+                "daily_deduction_percentage": effective_pct,
             }

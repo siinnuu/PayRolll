@@ -1,5 +1,5 @@
 """
-Reports and DBMS Analytics Service Layer (Module 8).
+Reports Analytics Service Layer.
 Coordinates report data aggregation, CSV serialization, and statistical summaries.
 """
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class ReportsService:
-    """Service handling analytical reporting aggregations, CSV generation, and DBMS data."""
+    """Service handling analytical reporting aggregations, CSV generation, and summary data."""
 
     def __init__(
         self,

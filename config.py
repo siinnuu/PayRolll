@@ -18,7 +18,7 @@ else:
 
 class Config:
     """Base configuration class with environment-driven variables."""
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-insecure-secret-key-change-in-production")
+    SECRET_KEY = os.environ.get("SECRET_KEY")
     
     # MySQL Database Settings
     DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")
@@ -63,6 +63,7 @@ class TestingConfig(Config):
     """Testing environment configuration."""
     TESTING = True
     DEBUG = True
+    SECRET_KEY = os.environ.get("SECRET_KEY", "test-testing-secret-key-fixture-32chars-min")
     DB_NAME = os.environ.get("TEST_DB_NAME", "employee_payroll_test")
     DB_POOL_NAME = "payroll_test_pool"
     DB_POOL_SIZE = 2

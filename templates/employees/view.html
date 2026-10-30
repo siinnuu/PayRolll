@@ -137,20 +137,20 @@
                         <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
                             <span class="text-muted">Basic Monthly Salary</span>
                             <span class="fs-5 fw-extrabold text-success font-mono">
-                                ${{ "{:,.2f}".format(employee.base_salary) }}
+                                {{ employee.base_salary | inr }}
                             </span>
                         </li>
                         <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
                             <span class="text-muted">House Rent Allowance (HRA)</span>
-                            <span class="font-mono text-main">${{ "{:,.2f}".format(employee.hra or 0.0) }}</span>
+                            <span class="font-mono text-main">{{ (employee.hra or 0.0) | inr }}</span>
                         </li>
                         <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
                             <span class="text-muted">Transport Allowance</span>
-                            <span class="font-mono text-main">${{ "{:,.2f}".format(employee.transport_allowance or 0.0) }}</span>
+                            <span class="font-mono text-main">{{ (employee.transport_allowance or 0.0) | inr }}</span>
                         </li>
                         <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
                             <span class="text-muted">Medical Allowance</span>
-                            <span class="font-mono text-main">${{ "{:,.2f}".format(employee.medical_allowance or 0.0) }}</span>
+                            <span class="font-mono text-main">{{ (employee.medical_allowance or 0.0) | inr }}</span>
                         </li>
                     </ul>
                 </div>

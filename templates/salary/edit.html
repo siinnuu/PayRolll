@@ -15,17 +15,17 @@
             </ol>
         </nav>
 
-        <div class="glass-card shadow-sm p-4 p-md-5 mb-5">
+        <div class="card bg-card border shadow-sm p-4 p-md-5 mb-5">
             <!-- Header Banner -->
-            <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 border-bottom gap-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="avatar-circle-md bg-primary-subtle text-primary fw-bold fs-4">
+                    <div class="p-3 rounded-circle bg-primary-subtle text-primary fw-bold fs-4 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
                         {{ salary_cfg.first_name[0] }}{{ salary_cfg.last_name[0] }}
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <h2 class="h4 fw-extrabold text-main mb-0">{{ salary_cfg.first_name }} {{ salary_cfg.last_name }}</h2>
-                            <span class="badge bg-secondary-subtle text-secondary border fs-xs">{{ salary_cfg.employee_code }}</span>
+                            <span class="badge bg-secondary-subtle text-secondary border fs-xs font-mono">{{ salary_cfg.employee_code }}</span>
                         </div>
                         <p class="text-muted small mb-0">
                             {{ salary_cfg.designation }} &bull; {{ salary_cfg.department }}
@@ -72,17 +72,17 @@
                         <!-- Basic Monthly Salary -->
                         <div class="col-md-6">
                             <label for="inputBaseSalary" class="form-label fw-semibold text-main">
-                                Basic Monthly Salary ($) <span class="text-danger">*</span>
+                                Basic Monthly Salary (INR) <span class="text-danger">*</span>
                             </label>
                             <div class="input-group">
-                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <span class="input-group-text bg-body-tertiary">₹</span>
                                 <input 
                                     type="number" 
                                     step="0.01" 
                                     min="0" 
                                     name="base_salary" 
                                     id="inputBaseSalary" 
-                                    class="form-control {% if errors.base_salary %}is-invalid{% endif %}" 
+                                    class="form-control font-mono {% if errors.base_salary %}is-invalid{% endif %}" 
                                     value="{{ form_data.base_salary }}" 
                                     required
                                     oninput="recalcAllowances()"
@@ -92,24 +92,24 @@
                                 {% endif %}
                             </div>
                             <div class="form-text text-muted small">
-                                Used as the foundation for daily rate calculation ($Daily\ Rate = Basic / Working\ Days$).
+                                Base monthly compensation in Indian Rupees (INR).
                             </div>
                         </div>
 
                         <!-- Hourly Overtime Rate -->
                         <div class="col-md-6">
                             <label for="inputHourlyRate" class="form-label fw-semibold text-main">
-                                Hourly Overtime Rate ($)
+                                Hourly Overtime Rate (INR)
                             </label>
                             <div class="input-group">
-                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <span class="input-group-text bg-body-tertiary">₹</span>
                                 <input 
                                     type="number" 
                                     step="0.01" 
                                     min="0" 
                                     name="hourly_rate" 
                                     id="inputHourlyRate" 
-                                    class="form-control {% if errors.hourly_rate %}is-invalid{% endif %}" 
+                                    class="form-control font-mono {% if errors.hourly_rate %}is-invalid{% endif %}" 
                                     value="{{ form_data.hourly_rate }}"
                                 >
                                 <span class="input-group-text bg-body-tertiary">/ hr</span>
@@ -118,7 +118,7 @@
                                 {% endif %}
                             </div>
                             <div class="form-text text-muted small">
-                                Employee-specific overtime rate taking precedence during monthly calculation.
+                                Overtime rate per hour; takes precedence when computing overtime pay.
                             </div>
                         </div>
                     </div>
@@ -130,24 +130,24 @@
                         <h5 class="fw-bold text-main mb-0 d-flex align-items-center gap-2">
                             <i class="bi bi-gift text-primary"></i> 2. Monthly Allowances
                         </h5>
-                        <div class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1">
-                            Total Allowances: <strong id="displayTotalAllowances">$0.00</strong>
+                        <div class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 font-mono">
+                            Total Allowances: <strong id="displayTotalAllowances">₹0.00</strong>
                         </div>
                     </div>
 
                     <div class="row g-3">
                         <!-- HRA -->
                         <div class="col-sm-6 col-md-3">
-                            <label for="inputHra" class="form-label fw-semibold text-main small">House Rent Allowance (HRA)</label>
+                            <label for="inputHra" class="form-label fw-semibold text-main small">HRA</label>
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <span class="input-group-text bg-body-tertiary">₹</span>
                                 <input 
                                     type="number" 
                                     step="0.01" 
                                     min="0" 
                                     name="hra" 
                                     id="inputHra" 
-                                    class="form-control {% if errors.hra %}is-invalid{% endif %}" 
+                                    class="form-control font-mono {% if errors.hra %}is-invalid{% endif %}" 
                                     value="{{ form_data.hra }}" 
                                     oninput="recalcAllowances()"
                                 >
@@ -156,16 +156,16 @@
 
                         <!-- Transport Allowance -->
                         <div class="col-sm-6 col-md-3">
-                            <label for="inputTransport" class="form-label fw-semibold text-main small">Transport Allowance</label>
+                            <label for="inputTransport" class="form-label fw-semibold text-main small">Transport</label>
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <span class="input-group-text bg-body-tertiary">₹</span>
                                 <input 
                                     type="number" 
                                     step="0.01" 
                                     min="0" 
                                     name="transport_allowance" 
                                     id="inputTransport" 
-                                    class="form-control {% if errors.transport_allowance %}is-invalid{% endif %}" 
+                                    class="form-control font-mono {% if errors.transport_allowance %}is-invalid{% endif %}" 
                                     value="{{ form_data.transport_allowance }}" 
                                     oninput="recalcAllowances()"
                                 >
@@ -174,16 +174,16 @@
 
                         <!-- Medical Allowance -->
                         <div class="col-sm-6 col-md-3">
-                            <label for="inputMedical" class="form-label fw-semibold text-main small">Medical Allowance</label>
+                            <label for="inputMedical" class="form-label fw-semibold text-main small">Medical</label>
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <span class="input-group-text bg-body-tertiary">₹</span>
                                 <input 
                                     type="number" 
                                     step="0.01" 
                                     min="0" 
                                     name="medical_allowance" 
                                     id="inputMedical" 
-                                    class="form-control {% if errors.medical_allowance %}is-invalid{% endif %}" 
+                                    class="form-control font-mono {% if errors.medical_allowance %}is-invalid{% endif %}" 
                                     value="{{ form_data.medical_allowance }}" 
                                     oninput="recalcAllowances()"
                                 >
@@ -192,16 +192,16 @@
 
                         <!-- Other Allowances -->
                         <div class="col-sm-6 col-md-3">
-                            <label for="inputOtherAllowances" class="form-label fw-semibold text-main small">Other Allowances</label>
+                            <label for="inputOtherAllowances" class="form-label fw-semibold text-main small">Other</label>
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <span class="input-group-text bg-body-tertiary">₹</span>
                                 <input 
                                     type="number" 
                                     step="0.01" 
                                     min="0" 
                                     name="other_allowances" 
                                     id="inputOtherAllowances" 
-                                    class="form-control {% if errors.other_allowances %}is-invalid{% endif %}" 
+                                    class="form-control font-mono {% if errors.other_allowances %}is-invalid{% endif %}" 
                                     value="{{ form_data.other_allowances }}" 
                                     oninput="recalcAllowances()"
                                 >
@@ -210,27 +210,87 @@
                     </div>
                 </div>
 
-                <!-- SECTION 3: Standard Deductions & Effective Date -->
+                <!-- SECTION 3: Unpaid Leave Deduction Policy -->
                 <div class="mb-4">
                     <h5 class="fw-bold text-main border-bottom pb-2 mb-3 d-flex align-items-center gap-2">
-                        <i class="bi bi-dash-circle text-primary"></i> 3. Standard Deductions &amp; Effective Date
+                        <i class="bi bi-calculator-fill text-primary"></i> 3. Unpaid Leave Deduction Policy
+                    </h5>
+
+                    {% set current_method = 'B' if salary_cfg.pf_deduction_rate == 1.00 or form_data.leave_deduction_method == 'B' else 'A' %}
+                    {% set current_pct = form_data.daily_deduction_percentage or salary_cfg.tax_deduction_rate or '3.33' %}
+
+                    <div class="p-3 border rounded-3 bg-body-tertiary mb-3">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="leave_deduction_method" id="methodA" value="A" {% if current_method == 'A' %}checked{% endif %} onchange="toggleLeaveMethod()">
+                            <label class="form-check-label fw-bold text-main" for="methodA">
+                                Method A: Daily-rate calculation
+                            </label>
+                            <div class="text-muted small ps-1 mt-1">
+                                <code>Daily rate = Basic monthly salary / Total working days</code><br>
+                                <code>Leave deduction = Daily rate × Unpaid leave days</code>
+                            </div>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="leave_deduction_method" id="methodB" value="B" {% if current_method == 'B' %}checked{% endif %} onchange="toggleLeaveMethod()">
+                            <label class="form-check-label fw-bold text-main" for="methodB">
+                                Method B: Percentage-based calculation
+                            </label>
+                            <div class="text-muted small ps-1 mt-1 mb-2">
+                                <code>Daily leave deduction = Basic monthly salary × Configured percentage / 100</code><br>
+                                <code>Total leave deduction = Daily leave deduction × Unpaid leave days</code>
+                            </div>
+                        </div>
+
+                        <!-- Method B Configuration Options -->
+                        <div class="row g-2 mt-2 ps-4" id="methodBConfigContainer" style="{% if current_method != 'B' %}display: none;{% endif %}">
+                            <div class="col-sm-8 col-md-5">
+                                <label for="dailyDeductionPct" class="form-label small fw-semibold text-main">
+                                    Daily Deduction Percentage (% of Basic) <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group input-group-sm">
+                                    <input 
+                                        type="number" 
+                                        step="0.01" 
+                                        min="0" 
+                                        max="100" 
+                                        name="daily_deduction_percentage" 
+                                        id="dailyDeductionPct" 
+                                        class="form-control font-mono {% if errors.daily_deduction_percentage %}is-invalid{% endif %}" 
+                                        value="{{ current_pct }}"
+                                    >
+                                    <span class="input-group-text bg-body-tertiary">%</span>
+                                    {% if errors.daily_deduction_percentage %}
+                                        <div class="invalid-feedback">{{ errors.daily_deduction_percentage }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-text text-muted small">Standard default is 3.33% (~1/30th of monthly pay).</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 4: Standard Deductions & Effective Date -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-main border-bottom pb-2 mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-dash-circle text-primary"></i> 4. Other Deductions &amp; Effective Date
                     </h5>
 
                     <div class="row g-3">
                         <!-- Other Deductions -->
                         <div class="col-md-6">
                             <label for="inputOtherDeductions" class="form-label fw-semibold text-main">
-                                Monthly Other Deductions ($)
+                                Monthly Other Deductions (INR)
                             </label>
                             <div class="input-group">
-                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <span class="input-group-text bg-body-tertiary">₹</span>
                                 <input 
                                     type="number" 
                                     step="0.01" 
                                     min="0" 
                                     name="other_deductions" 
                                     id="inputOtherDeductions" 
-                                    class="form-control {% if errors.other_deductions %}is-invalid{% endif %}" 
+                                    class="form-control font-mono {% if errors.other_deductions %}is-invalid{% endif %}" 
                                     value="{{ form_data.other_deductions }}"
                                 >
                                 {% if errors.other_deductions %}
@@ -238,7 +298,7 @@
                                 {% endif %}
                             </div>
                             <div class="form-text text-muted small">
-                                Fixed monthly deductions (e.g. loan installments, employee dues) added to leave deductions.
+                                Fixed monthly deductions (e.g. loan installments, employee dues).
                             </div>
                         </div>
 
@@ -251,7 +311,7 @@
                                 type="date" 
                                 name="effective_from" 
                                 id="inputEffectiveFrom" 
-                                class="form-control {% if errors.effective_from %}is-invalid{% endif %}" 
+                                class="form-control font-mono {% if errors.effective_from %}is-invalid{% endif %}" 
                                 value="{{ form_data.effective_from }}" 
                                 required
                             >
@@ -288,12 +348,21 @@ function recalcAllowances() {
     const total = hra + transport + medical + other;
     const displayElem = document.getElementById("displayTotalAllowances");
     if (displayElem) {
-        displayElem.innerText = `$${total.toFixed(2)}`;
+        displayElem.innerText = `₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+}
+
+function toggleLeaveMethod() {
+    const isMethodB = document.getElementById("methodB")?.checked;
+    const container = document.getElementById("methodBConfigContainer");
+    if (container) {
+        container.style.display = isMethodB ? "flex" : "none";
     }
 }
 
 document.addEventListener("DOMContentLoaded", function() {
     recalcAllowances();
+    toggleLeaveMethod();
 });
 </script>
 {% endblock %}

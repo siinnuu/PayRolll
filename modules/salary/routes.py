@@ -158,6 +158,8 @@ def preview():
     raw_year = request.args.get("year")
     raw_month = request.args.get("month")
     raw_allow_negative = request.args.get("allow_negative_net")
+    raw_method = request.args.get("leave_deduction_method")
+    raw_pct = request.args.get("daily_deduction_percentage")
 
     allow_negative_net = (raw_allow_negative == "1" or raw_allow_negative == "true")
 
@@ -187,6 +189,8 @@ def preview():
             year=selected_year,
             month=selected_month,
             allow_negative_net=allow_negative_net,
+            leave_deduction_method=raw_method,
+            daily_deduction_percentage=raw_pct,
         )
 
     return render_template(
@@ -214,6 +218,8 @@ def api_preview():
     year = request.args.get("year", type=int, default=today.year)
     month = request.args.get("month", type=int, default=today.month)
     allow_negative = request.args.get("allow_negative_net", default="0") in ("1", "true")
+    method = request.args.get("leave_deduction_method")
+    pct = request.args.get("daily_deduction_percentage")
 
     if not emp_id:
         return jsonify({"status": "error", "message": "Employee ID is required."}), 400
@@ -223,6 +229,8 @@ def api_preview():
         year=year,
         month=month,
         allow_negative_net=allow_negative,
+        leave_deduction_method=method,
+        daily_deduction_percentage=pct,
     )
 
     if result["status"] == "success":
@@ -239,6 +247,8 @@ def api_preview():
             "paid_leave_days": str(calc.paid_leave_days),
             "unpaid_leave_days": str(calc.unpaid_leave_days),
             "leave_deduction": str(calc.leave_deduction),
+            "leave_deduction_method": calc.leave_deduction_method,
+            "daily_deduction_percentage": str(calc.daily_deduction_percentage),
             "allowances": str(calc.allowances),
             "overtime_hours": str(calc.overtime_hours),
             "overtime_rate": str(calc.overtime_rate),

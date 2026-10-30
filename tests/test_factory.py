@@ -23,12 +23,21 @@ def test_blueprints_registered(app):
 
 
 def test_index_route(client):
-    """Verify landing page renders successfully."""
+    """Verify landing page redirects unauthenticated visitors to login."""
     response = client.get("/")
-    assert response.status_code == 200
-    assert b"PayMaster Pro" in response.data
-    assert b"Employee Payroll Management System" in response.data
-    assert b"Module 1" in response.data
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+
+def test_index_route_authenticated(client):
+    """Verify landing page redirects authenticated users to the dashboard."""
+    with client.session_transaction() as sess:
+        sess["user_id"] = 1
+        sess["username"] = "finance_admin"
+        sess["role"] = "ACCOUNTANT"
+    response = client.get("/")
+    assert response.status_code == 302
+    assert "/dashboard" in response.headers["Location"]
 
 
 def test_404_error_handler(client):

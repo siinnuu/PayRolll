@@ -55,3 +55,27 @@ def test_config_by_name_mapping():
     assert config_by_name["development"] is DevelopmentConfig
     assert config_by_name["testing"] is TestingConfig
     assert config_by_name["production"] is ProductionConfig
+
+
+def test_missing_secret_key_fails_safely():
+    """Verify application factory raises RuntimeError when SECRET_KEY is missing in non-testing env."""
+    import pytest
+    from app import create_app
+
+    class InsecureConfig:
+        TESTING = False
+        DEBUG = False
+        SECRET_KEY = None
+        DB_HOST = "127.0.0.1"
+        DB_PORT = 3306
+        DB_USER = "root"
+        DB_PASSWORD = ""
+        DB_NAME = "employee_payroll"
+        DB_POOL_NAME = "test_pool"
+        DB_POOL_SIZE = 1
+        DB_POOL_RESET_SESSION = True
+
+    with pytest.raises(RuntimeError) as excinfo:
+        create_app(InsecureConfig)
+    assert "SECRET_KEY environment variable is not configured" in str(excinfo.value)
+

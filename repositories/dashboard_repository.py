@@ -29,23 +29,32 @@ class DashboardRepository(BaseRepository):
 
     def get_monthly_payroll_summary(self, year: int, month: int) -> Dict[str, Any]:
         """
-        Calculate gross pay total, total deductions, and net salary paid for the specified month.
+        Calculate gross pay total, total deductions, net salary, and net salary paid for the specified month.
+        Also tallies counts for generated (draft), approved, and paid statements.
         Returns zeroed financial values if no records match or database is empty.
         """
         defaults = {
             "gross_total": Decimal("0.00"),
             "deductions_total": Decimal("0.00"),
+            "net_total": Decimal("0.00"),
             "net_paid_total": Decimal("0.00"),
             "record_count": 0,
+            "generated_count": 0,
+            "approved_count": 0,
+            "paid_count": 0,
         }
         try:
-            # Note: net_paid_total calculates records that have status 'PAID'
+            # Note: net_paid_total strictly calculates records that have status 'PAID'
             query = """
                 SELECT 
                     COALESCE(SUM(gross_pay), 0.00) AS gross_total,
                     COALESCE(SUM(total_deductions), 0.00) AS deductions_total,
+                    COALESCE(SUM(net_pay), 0.00) AS net_total,
                     COALESCE(SUM(CASE WHEN status = 'PAID' THEN net_pay ELSE 0.00 END), 0.00) AS net_paid_total,
-                    COUNT(*) AS record_count
+                    COUNT(*) AS record_count,
+                    COALESCE(SUM(CASE WHEN status IN ('DRAFT', 'GENERATED') THEN 1 ELSE 0 END), 0) AS generated_count,
+                    COALESCE(SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END), 0) AS approved_count,
+                    COALESCE(SUM(CASE WHEN status = 'PAID' THEN 1 ELSE 0 END), 0) AS paid_count
                 FROM payroll
                 WHERE year = %s AND month = %s;
             """
@@ -54,13 +63,37 @@ class DashboardRepository(BaseRepository):
                 return {
                     "gross_total": Decimal(str(result.get("gross_total") or "0.00")),
                     "deductions_total": Decimal(str(result.get("deductions_total") or "0.00")),
+                    "net_total": Decimal(str(result.get("net_total") or "0.00")),
                     "net_paid_total": Decimal(str(result.get("net_paid_total") or "0.00")),
                     "record_count": int(result.get("record_count") or 0),
+                    "generated_count": int(result.get("generated_count") or 0),
+                    "approved_count": int(result.get("approved_count") or 0),
+                    "paid_count": int(result.get("paid_count") or 0),
                 }
             return defaults
         except Exception as e:
             logger.warning("Error fetching monthly payroll summary for %04d-%02d: %s", year, month, e)
             return defaults
+
+    def get_awaiting_approval_count(self) -> int:
+        """Count payroll records awaiting approval (status in 'DRAFT', 'GENERATED')."""
+        try:
+            query = "SELECT COUNT(*) AS total FROM payroll WHERE status IN ('DRAFT', 'GENERATED');"
+            result = self.execute_query(query, fetch_one=True)
+            return int(result.get("total", 0)) if result else 0
+        except Exception as e:
+            logger.warning("Error fetching awaiting approval count: %s", e)
+            return 0
+
+    def get_approved_awaiting_payment_count(self) -> int:
+        """Count approved payroll records awaiting payment (status = 'APPROVED')."""
+        try:
+            query = "SELECT COUNT(*) AS total FROM payroll WHERE status = 'APPROVED';"
+            result = self.execute_query(query, fetch_one=True)
+            return int(result.get("total", 0)) if result else 0
+        except Exception as e:
+            logger.warning("Error fetching approved awaiting payment count: %s", e)
+            return 0
 
     def get_pending_payroll_count(self, year: Optional[int] = None, month: Optional[int] = None) -> int:
         """

@@ -546,3 +546,71 @@ def test_salary_preview_api_json(client):
         assert data["gross_salary"] == "33000.00"
         assert data["total_deductions"] == "2900.00"
         assert data["net_salary"] == "30100.00"
+
+
+def test_calculate_salary_method_b_percentage_based():
+    """Verify Method B: percentage-based leave deduction calculation."""
+    res = SalaryCalculationEngine.calculate_salary(
+        basic_salary=Decimal("60000.00"),
+        total_working_days=20,
+        unpaid_leave_days=Decimal("2.0"),
+        allowances=Decimal("10000.00"),
+        overtime_hours=Decimal("0.00"),
+        overtime_rate=Decimal("0.00"),
+        other_deductions=Decimal("0.00"),
+        leave_deduction_method="B",
+        daily_deduction_percentage=Decimal("4.00"),
+    )
+
+    # Daily deduction = 60000 * 4% = 2400.00
+    # Total leave deduction = 2400.00 * 2 = 4800.00
+    assert res.leave_deduction_method == "B"
+    assert res.daily_deduction_percentage == Decimal("4.00")
+    assert res.daily_salary == Decimal("2400.00")
+    assert res.leave_deduction == Decimal("4800.00")
+    assert res.gross_salary == Decimal("70000.00")
+    assert res.total_deductions == Decimal("4800.00")
+    assert res.net_salary == Decimal("65200.00")
+
+
+def test_calculate_salary_methods_do_not_apply_simultaneously():
+    """Verify Method A and Method B do not apply at the same time."""
+    basic = Decimal("50000.00")
+    working_days = 25
+    unpaid_days = Decimal("3.0")
+
+    # Method A: Daily rate = 50000 / 25 = 2000.00; Total = 6000.00
+    res_a = SalaryCalculationEngine.calculate_salary(
+        basic_salary=basic,
+        total_working_days=working_days,
+        unpaid_leave_days=unpaid_days,
+        allowances=Decimal("0.00"),
+        overtime_hours=Decimal("0.00"),
+        overtime_rate=Decimal("0.00"),
+        other_deductions=Decimal("0.00"),
+        leave_deduction_method="A",
+        daily_deduction_percentage=Decimal("5.00"),  # Ignored for Method A
+    )
+    assert res_a.leave_deduction_method == "A"
+    assert res_a.daily_salary == Decimal("2000.00")
+    assert res_a.leave_deduction == Decimal("6000.00")
+
+    # Method B: Daily rate = 50000 * 3% = 1500.00; Total = 4500.00
+    res_b = SalaryCalculationEngine.calculate_salary(
+        basic_salary=basic,
+        total_working_days=working_days,
+        unpaid_leave_days=unpaid_days,
+        allowances=Decimal("0.00"),
+        overtime_hours=Decimal("0.00"),
+        overtime_rate=Decimal("0.00"),
+        other_deductions=Decimal("0.00"),
+        leave_deduction_method="B",
+        daily_deduction_percentage=Decimal("3.00"),
+    )
+    assert res_b.leave_deduction_method == "B"
+    assert res_b.daily_salary == Decimal("1500.00")
+    assert res_b.leave_deduction == Decimal("4500.00")
+
+    # Ensure leave deductions are strictly independent and different
+    assert res_a.leave_deduction != res_b.leave_deduction
+

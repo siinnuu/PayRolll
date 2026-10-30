@@ -398,7 +398,6 @@ class TestReportsRoutes:
             "/reports/export/attendance.csv",
             "/reports/export/payments.csv",
             "/reports/export/departments.csv",
-            "/reports/dbms",
         ]
         for ep in endpoints:
             response = client.get(ep)
@@ -519,42 +518,3 @@ class TestReportsRoutes:
         assert response.mimetype == "text/csv"
         assert "attachment; filename=" in response.headers["Content-Disposition"]
         assert b"Department,Total Headcount" in response.data
-
-    def test_academic_dbms_documentation_page(self, client):
-        """Authenticated request to /reports/dbms renders the complete academic documentation."""
-        authenticate_session(client)
-
-        response = client.get("/reports/dbms")
-        assert response.status_code == 200
-        html = response.data.decode("utf-8")
-
-        # Verify key academic sections
-        assert "Database Management System (DBMS) Academic Documentation" in html
-        assert "1. Project Overview &amp; Problem Statement" in html or "1. Project Overview & Problem Statement" in html
-        assert "2. Entity-Relationship (ER) Diagram" in html
-        assert "3. Relational Schema Notation" in html
-        assert "4. Table Specifications &amp; Data Dictionary" in html or "4. Table Specifications & Data Dictionary" in html
-        assert "5. Entity Relationships &amp; Referential Integrity" in html or "5. Entity Relationships & Referential Integrity" in html
-        assert "6. Normalization Analysis &amp; Decomposition Proofs" in html or "6. Normalization Analysis & Decomposition Proofs" in html
-        assert "7. Parameterized CRUD Operations" in html
-        assert "8. Multi-Table Analytical JOIN Queries" in html
-        assert "9. Aggregations, GROUP BY &amp; Conditional Metrics" in html or "9. Aggregations, GROUP BY & Conditional Metrics" in html
-        assert "10. Monthly Salary Calculation Model &amp; SQL Implementation" in html or "10. Monthly Salary Calculation Model & SQL Implementation" in html
-        assert "11. Transaction Architecture &amp; ACID Guarantees" in html or "11. Transaction Architecture & ACID Guarantees" in html
-        assert "12. Sample Dataset &amp; Mathematical Verification" in html or "12. Sample Dataset & Mathematical Verification" in html
-        assert "13. Comprehensive Index of Demonstrated DBMS Concepts" in html
-
-        # Verify Mermaid.js integration
-        assert "mermaid" in html
-        assert "erDiagram" in html
-        assert "USERS" in html
-        assert "EMPLOYEES" in html
-        assert "SALARY_SETTINGS" in html
-        assert "ATTENDANCE" in html
-        assert "PAYROLL" in html
-        assert "PAYMENTS" in html
-
-        # Verify SQL examples and ACID details
-        assert "START TRANSACTION" in html or "conn.commit()" in html
-        assert "ON DELETE RESTRICT" in html
-        assert "REPEATABLE READ" in html

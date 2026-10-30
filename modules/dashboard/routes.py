@@ -43,6 +43,8 @@ def index():
     active_employees = dashboard_repo.get_active_employee_count()
     payroll_summary = dashboard_repo.get_monthly_payroll_summary(selected_year, selected_month)
     pending_records_count = dashboard_repo.get_pending_payroll_count()
+    awaiting_approval_count = dashboard_repo.get_awaiting_approval_count()
+    awaiting_payment_count = dashboard_repo.get_approved_awaiting_payment_count()
     recent_activity = dashboard_repo.get_recent_payroll_activity(limit=6)
     chart_trends = dashboard_repo.get_monthly_payroll_trend(limit_months=6)
 
@@ -64,6 +66,8 @@ def index():
         active_employees=active_employees,
         payroll_summary=payroll_summary,
         pending_records_count=pending_records_count,
+        awaiting_approval_count=awaiting_approval_count,
+        awaiting_payment_count=awaiting_payment_count,
         recent_activity=recent_activity,
         chart_labels_json=json.dumps(chart_labels),
         chart_gross_json=json.dumps(chart_gross_data),

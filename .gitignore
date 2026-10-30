@@ -49,3 +49,8 @@ htmlcov/
 
 # Logs
 *.log
+
+# Design skill references and external bundles
+ai-design-skills-main/
+designer-skills-main/
+

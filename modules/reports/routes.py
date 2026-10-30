@@ -1,9 +1,8 @@
 """
-Reports and DBMS Academic Documentation routes (Module 8).
+Reports routes (Module 8).
 Handles:
 - Main analytical reporting portal with multi-tab filters (Payroll, Attendance, Salary History, Distributions, Departments).
 - CSV exports for Payroll Register, Attendance Summary, Payment History, and Department Summary.
-- Academic DBMS Documentation page with Mermaid ER diagram, relational schemas, normalization analysis, and query examples.
 """
 
 from datetime import date
@@ -190,21 +189,3 @@ def export_departments_csv():
         mimetype="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
-
-
-@reports_bp.route("/dbms")
-@login_required
-def dbms_docs():
-    """
-    Academic DBMS Documentation page detailing:
-    - Problem Statement & System Architecture
-    - Mermaid ER Diagram matching the MySQL Schema
-    - Relational Schema Notations (PK, FK, Constraints)
-    - Normalization Proofs (1NF, 2NF, 3NF)
-    - Referential Integrity & ON DELETE RESTRICT
-    - Parameterized CRUD Statements & Analytical Join Examples
-    - Monthly Salary Calculation Query & Mathematical Formulas
-    - ACID Transaction Handling & Concurrency Safeguards
-    - Comprehensive Index of Demonstrated DBMS Concepts
-    """
-    return render_template("reports/dbms.html")

@@ -16,7 +16,6 @@ from modules.core import core_bp
 from modules.health import health_bp
 from modules.auth import auth_bp
 from modules.dashboard import dashboard_bp
-from modules.common import common_bp
 from modules.employees import employees_bp
 from modules.attendance import attendance_bp
 from modules.salary import salary_bp
@@ -49,6 +48,15 @@ def create_app(config_name: Optional[Union[str, type]] = None) -> Flask:
 
     app.config.from_object(config_class)
 
+    # Validate secret key configuration in non-testing environments
+    if not app.config.get("SECRET_KEY") and not app.config.get("TESTING"):
+        raise RuntimeError(
+            "CRITICAL SECURITY CONFIGURATION ERROR: SECRET_KEY environment variable is not configured. "
+            "Please generate a secure 256-bit secret key using:\n"
+            "    python -c \"import secrets; print(secrets.token_hex(32))\"\n"
+            "and configure SECRET_KEY in your .env file."
+        )
+
     # Initialize extensions
     db.init_app(app)
 
@@ -63,7 +71,6 @@ def create_app(config_name: Optional[Union[str, type]] = None) -> Flask:
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
-    app.register_blueprint(common_bp)
     app.register_blueprint(employees_bp)
     app.register_blueprint(attendance_bp)
     app.register_blueprint(salary_bp)
@@ -91,10 +98,10 @@ def register_template_context(app: Flask) -> None:
     def currency_filter(value):
         try:
             if value is None:
-                return "$0.00"
-            return f"${float(value):,.2f}"
+                return "₹0.00"
+            return f"₹{float(value):,.2f}"
         except Exception:
-            return "$0.00"
+            return "₹0.00"
 
     @app.template_filter("inr")
     def inr_filter(value):

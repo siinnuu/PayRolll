@@ -606,11 +606,6 @@ def test_step_14_view_monthly_reports(client):
         assert r_csv.status_code == 200
         assert r_csv.mimetype == "text/csv"
 
-        # DBMS Academic Docs
-        r_dbms = client.get("/reports/dbms")
-        assert r_dbms.status_code == 200
-        assert "Database Management System (DBMS) Academic Documentation" in r_dbms.data.decode("utf-8")
-
 
 def test_step_15_logout_and_verify_protected_pages_inaccessible(client):
     """Step 15: Log out and verify all protected endpoints strictly redirect to /login."""
@@ -634,7 +629,6 @@ def test_step_15_logout_and_verify_protected_pages_inaccessible(client):
         "/payroll",
         "/payments",
         "/reports",
-        "/reports/dbms",
         "/reports/export/payroll.csv",
         "/payments/awaiting",
     ]

@@ -64,6 +64,19 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarBackdrop.addEventListener('click', () => toggleSidebar(false));
     }
 
+    // Desktop Sidebar Collapse Toggle
+    const desktopToggle = document.getElementById('desktopSidebarToggle');
+    if (desktopToggle && sidebar) {
+        desktopToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('payroll-sidebar-collapsed', isCollapsed ? '1' : '0');
+        });
+        if (localStorage.getItem('payroll-sidebar-collapsed') === '1') {
+            sidebar.classList.add('collapsed');
+        }
+    }
+
     // 3. Clipboard copy button helpers
     document.querySelectorAll('[data-copy-target]').forEach(button => {
         button.addEventListener('click', () => {

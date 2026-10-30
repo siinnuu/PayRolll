@@ -48,7 +48,7 @@ def test_dashboard_empty_database_graceful_handling(client):
         response = client.get("/dashboard")
         assert response.status_code == 200
         assert b"Finance Management Dashboard" in response.data
-        assert b"$0.00" in response.data
+        assert b"0.00" in response.data
         assert b"No recent payroll transactions found" in response.data
         assert b"No Historical Payroll Records" in response.data
 

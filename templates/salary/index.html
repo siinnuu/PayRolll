@@ -8,12 +8,12 @@
 <!-- Page Header & Action Bar -->
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
     <div>
-        <div class="d-flex align-items-center gap-2 mb-1">
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-                <i class="bi bi-cash-coin me-1"></i> Module 5 Active
-            </span>
-            <span class="text-muted small">&bull; Compensation Architecture</span>
-        </div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}" class="text-decoration-none">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Salary Configuration</li>
+            </ol>
+        </nav>
         <h1 class="h2 fw-extrabold text-main mb-0">Salary Configuration</h1>
         <p class="text-muted small mb-0">
             Configure employee compensation structures, monthly allowances, overtime hourly rates, and deduction settings.
