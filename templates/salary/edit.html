@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Configure Salary - {{ salary_cfg.first_name }} {{ salary_cfg.last_name }} | PayMaster Pro{% endblock %}
+
+{% block header_title %}Salary Structure Setup{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{{ url_for('salary.index') }}" class="text-decoration-none">Salary Configuration</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Configure Structure</li>
+            </ol>
+        </nav>
+
+        <div class="glass-card shadow-sm p-4 p-md-5 mb-5">
+            <!-- Header Banner -->
+            <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-circle-md bg-primary-subtle text-primary fw-bold fs-4">
+                        {{ salary_cfg.first_name[0] }}{{ salary_cfg.last_name[0] }}
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h2 class="h4 fw-extrabold text-main mb-0">{{ salary_cfg.first_name }} {{ salary_cfg.last_name }}</h2>
+                            <span class="badge bg-secondary-subtle text-secondary border fs-xs">{{ salary_cfg.employee_code }}</span>
+                        </div>
+                        <p class="text-muted small mb-0">
+                            {{ salary_cfg.designation }} &bull; {{ salary_cfg.department }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('salary.preview', employee_id=salary_cfg.employee_id) }}" class="btn btn-outline-success btn-sm d-flex align-items-center gap-1" id="btnPreviewLink">
+                        <i class="bi bi-calculator"></i> Preview Calculation
+                    </a>
+                    <a href="{{ url_for('salary.index') }}" class="btn btn-outline-secondary btn-sm" id="btnBackToSalaryList">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <!-- Server-Side Validation Errors -->
+            {% if errors %}
+            <div class="alert alert-danger d-flex align-items-start gap-2 shadow-sm mb-4" role="alert" id="salaryFormErrors">
+                <i class="bi bi-exclamation-octagon-fill fs-5 flex-shrink-0 mt-1"></i>
+                <div class="small">
+                    <strong>Please resolve the following input errors:</strong>
+                    <ul class="mb-0 mt-1 ps-3">
+                        {% for field, error_msg in errors.items() %}
+                            <li><strong>{{ field|replace('_', ' ')|title }}:</strong> {{ error_msg }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Configuration Form -->
+            <form method="POST" action="{{ url_for('salary.edit', employee_id=salary_cfg.employee_id) }}" id="salaryConfigForm" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- SECTION 1: Basic Monthly Salary & Overtime Rate -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-main border-bottom pb-2 mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-cash-stack text-primary"></i> 1. Base Compensation &amp; Overtime Setting
+                    </h5>
+
+                    <div class="row g-3">
+                        <!-- Basic Monthly Salary -->
+                        <div class="col-md-6">
+                            <label for="inputBaseSalary" class="form-label fw-semibold text-main">
+                                Basic Monthly Salary ($) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    name="base_salary" 
+                                    id="inputBaseSalary" 
+                                    class="form-control {% if errors.base_salary %}is-invalid{% endif %}" 
+                                    value="{{ form_data.base_salary }}" 
+                                    required
+                                    oninput="recalcAllowances()"
+                                >
+                                {% if errors.base_salary %}
+                                    <div class="invalid-feedback">{{ errors.base_salary }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text text-muted small">
+                                Used as the foundation for daily rate calculation ($Daily\ Rate = Basic / Working\ Days$).
+                            </div>
+                        </div>
+
+                        <!-- Hourly Overtime Rate -->
+                        <div class="col-md-6">
+                            <label for="inputHourlyRate" class="form-label fw-semibold text-main">
+                                Hourly Overtime Rate ($)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    name="hourly_rate" 
+                                    id="inputHourlyRate" 
+                                    class="form-control {% if errors.hourly_rate %}is-invalid{% endif %}" 
+                                    value="{{ form_data.hourly_rate }}"
+                                >
+                                <span class="input-group-text bg-body-tertiary">/ hr</span>
+                                {% if errors.hourly_rate %}
+                                    <div class="invalid-feedback">{{ errors.hourly_rate }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text text-muted small">
+                                Employee-specific overtime rate taking precedence during monthly calculation.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: Monthly Allowances -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h5 class="fw-bold text-main mb-0 d-flex align-items-center gap-2">
+                            <i class="bi bi-gift text-primary"></i> 2. Monthly Allowances
+                        </h5>
+                        <div class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1">
+                            Total Allowances: <strong id="displayTotalAllowances">$0.00</strong>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- HRA -->
+                        <div class="col-sm-6 col-md-3">
+                            <label for="inputHra" class="form-label fw-semibold text-main small">House Rent Allowance (HRA)</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    name="hra" 
+                                    id="inputHra" 
+                                    class="form-control {% if errors.hra %}is-invalid{% endif %}" 
+                                    value="{{ form_data.hra }}" 
+                                    oninput="recalcAllowances()"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Transport Allowance -->
+                        <div class="col-sm-6 col-md-3">
+                            <label for="inputTransport" class="form-label fw-semibold text-main small">Transport Allowance</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    name="transport_allowance" 
+                                    id="inputTransport" 
+                                    class="form-control {% if errors.transport_allowance %}is-invalid{% endif %}" 
+                                    value="{{ form_data.transport_allowance }}" 
+                                    oninput="recalcAllowances()"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Medical Allowance -->
+                        <div class="col-sm-6 col-md-3">
+                            <label for="inputMedical" class="form-label fw-semibold text-main small">Medical Allowance</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    name="medical_allowance" 
+                                    id="inputMedical" 
+                                    class="form-control {% if errors.medical_allowance %}is-invalid{% endif %}" 
+                                    value="{{ form_data.medical_allowance }}" 
+                                    oninput="recalcAllowances()"
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Other Allowances -->
+                        <div class="col-sm-6 col-md-3">
+                            <label for="inputOtherAllowances" class="form-label fw-semibold text-main small">Other Allowances</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    name="other_allowances" 
+                                    id="inputOtherAllowances" 
+                                    class="form-control {% if errors.other_allowances %}is-invalid{% endif %}" 
+                                    value="{{ form_data.other_allowances }}" 
+                                    oninput="recalcAllowances()"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: Standard Deductions & Effective Date -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-main border-bottom pb-2 mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-dash-circle text-primary"></i> 3. Standard Deductions &amp; Effective Date
+                    </h5>
+
+                    <div class="row g-3">
+                        <!-- Other Deductions -->
+                        <div class="col-md-6">
+                            <label for="inputOtherDeductions" class="form-label fw-semibold text-main">
+                                Monthly Other Deductions ($)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    name="other_deductions" 
+                                    id="inputOtherDeductions" 
+                                    class="form-control {% if errors.other_deductions %}is-invalid{% endif %}" 
+                                    value="{{ form_data.other_deductions }}"
+                                >
+                                {% if errors.other_deductions %}
+                                    <div class="invalid-feedback">{{ errors.other_deductions }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text text-muted small">
+                                Fixed monthly deductions (e.g. loan installments, employee dues) added to leave deductions.
+                            </div>
+                        </div>
+
+                        <!-- Effective Date -->
+                        <div class="col-md-6">
+                            <label for="inputEffectiveFrom" class="form-label fw-semibold text-main">
+                                Effective Date <span class="text-danger">*</span>
+                            </label>
+                            <input 
+                                type="date" 
+                                name="effective_from" 
+                                id="inputEffectiveFrom" 
+                                class="form-control {% if errors.effective_from %}is-invalid{% endif %}" 
+                                value="{{ form_data.effective_from }}" 
+                                required
+                            >
+                            {% if errors.effective_from %}
+                                <div class="invalid-feedback">{{ errors.effective_from }}</div>
+                            {% else %}
+                                <div class="form-text text-muted small">Date this salary structure becomes effective.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="d-flex justify-content-end align-items-center gap-3 pt-3 border-top">
+                    <a href="{{ url_for('salary.index') }}" class="btn btn-outline-secondary px-4 py-2" id="btnCancelSalaryEdit">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold d-inline-flex align-items-center gap-2" id="btnSaveSalaryConfig">
+                        <i class="bi bi-check-lg"></i> Save Salary Configuration
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function recalcAllowances() {
+    const hra = parseFloat(document.getElementById("inputHra")?.value || 0);
+    const transport = parseFloat(document.getElementById("inputTransport")?.value || 0);
+    const medical = parseFloat(document.getElementById("inputMedical")?.value || 0);
+    const other = parseFloat(document.getElementById("inputOtherAllowances")?.value || 0);
+
+    const total = hra + transport + medical + other;
+    const displayElem = document.getElementById("displayTotalAllowances");
+    if (displayElem) {
+        displayElem.innerText = `$${total.toFixed(2)}`;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    recalcAllowances();
+});
+</script>
+{% endblock %}

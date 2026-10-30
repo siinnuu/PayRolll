@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Ledger - {{ employee.first_name }} {{ employee.last_name }} | PayMaster Pro{% endblock %}
+
+{% block header_title %}Attendance History Ledger{% endblock %}
+
+{% block content %}
+<!-- Breadcrumbs & Navigation -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <nav aria-label="breadcrumb" class="mb-1">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{{ url_for('attendance.index') }}" class="text-decoration-none">Attendance Ledger</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Employee History</li>
+            </ol>
+        </nav>
+        <h1 class="h2 fw-extrabold text-main mb-0">Attendance History &amp; Leave Ledger</h1>
+        <p class="text-muted small mb-0">
+            Chronological monthly attendance records, leave consumption breakdown, and cumulative overtime for {{ employee.first_name }} {{ employee.last_name }}.
+        </p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" id="btnBackToList">
+            <i class="bi bi-arrow-left"></i> All Attendance
+        </a>
+        {% if employee.status == 'ACTIVE' %}
+        <a href="{{ url_for('attendance.add', employee_id=employee.id) }}" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnAddForEmployee">
+            <i class="bi bi-calendar-plus-fill"></i> Record Monthly Entry
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Employee Profile Banner -->
+<div class="glass-card p-4 mb-4 shadow-sm">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="avatar-circle-lg bg-primary-subtle text-primary fw-extrabold fs-3">
+                {{ employee.first_name[0] }}{{ employee.last_name[0] }}
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <h3 class="fw-bold text-main mb-0">{{ employee.first_name }} {{ employee.last_name }}</h3>
+                    <span class="badge bg-secondary-subtle text-secondary border fs-xs">{{ employee.employee_code }}</span>
+                    {% if employee.status == 'ACTIVE' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle fs-xs">
+                            <i class="bi bi-check-circle-fill me-1"></i> Active
+                        </span>
+                    {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-xs">
+                            {{ employee.status }}
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-3 text-muted small">
+                    <span><i class="bi bi-briefcase me-1"></i> {{ employee.designation }}</span>
+                    <span>&bull;</span>
+                    <span><i class="bi bi-building me-1"></i> {{ employee.department }}</span>
+                    <span>&bull;</span>
+                    <span><i class="bi bi-envelope me-1"></i> {{ employee.email }}</span>
+                    <span>&bull;</span>
+                    <span><i class="bi bi-calendar-event me-1"></i> Joined: {{ employee.joining_date }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-md-end">
+            <div class="text-muted small">Base Overtime Rate</div>
+            <div class="fw-bold text-main fs-5">
+                {{ employee.hourly_rate|currency if employee.hourly_rate else '$0.00' }} <span class="fs-xs fw-normal text-muted">/ hr</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lifetime Attendance Statistics Cards -->
+<div class="row g-3 mb-4">
+    <!-- Stat 1: Total Months -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-primary">
+            <span class="text-muted small fw-semibold text-uppercase">Recorded Months</span>
+            <h3 class="fw-bold my-1 text-main">{{ stats.total_months }}</h3>
+            <span class="text-muted fs-xs">Total payroll cycles logged</span>
+        </div>
+    </div>
+
+    <!-- Stat 2: Total Days Worked -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-success">
+            <span class="text-muted small fw-semibold text-uppercase">Career Days Worked</span>
+            <h3 class="fw-bold my-1 text-success">{{ stats.total_present_days }}</h3>
+            <span class="text-muted fs-xs">Avg. Attendance: {{ stats.avg_attendance_rate }}%</span>
+        </div>
+    </div>
+
+    <!-- Stat 3: Total Leaves Breakdown -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-warning">
+            <span class="text-muted small fw-semibold text-uppercase">Leave Consumption</span>
+            <h4 class="fw-bold my-1 text-main">{{ stats.total_leaves }} <span class="fs-xs fw-normal text-muted">total days</span></h4>
+            <div class="d-flex align-items-center gap-2 fs-xs">
+                <span class="text-success"><i class="bi bi-check-circle me-1"></i>{{ stats.total_paid_leaves }} Paid</span>
+                <span>&bull;</span>
+                <span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>{{ stats.total_unpaid_leaves }} Unpaid</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stat 4: Overtime Accrued -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-info">
+            <span class="text-muted small fw-semibold text-uppercase">Total Overtime</span>
+            <h3 class="fw-bold my-1 text-primary">{{ stats.total_overtime_hours }} <span class="fs-xs fw-normal text-muted">hrs</span></h3>
+            <span class="text-muted fs-xs">Reconciled extra hours</span>
+        </div>
+    </div>
+</div>
+
+<!-- Historical Attendance Ledger Table -->
+<div class="glass-card shadow-sm overflow-hidden mb-4">
+    <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+        <div class="fw-bold text-main">
+            <i class="bi bi-journal-text text-primary me-2"></i> Monthly Reconciliation History
+        </div>
+        <span class="badge bg-body-tertiary text-muted border px-2 py-1">
+            {{ history|length }} Total Records
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="employeeHistoryTable">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th scope="col" class="ps-4">Period</th>
+                    <th scope="col" class="text-center">Working Days</th>
+                    <th scope="col" class="text-center">Days Worked</th>
+                    <th scope="col" class="text-center">Paid Leaves</th>
+                    <th scope="col" class="text-center">Unpaid Leaves</th>
+                    <th scope="col" class="text-center">Total Leaves</th>
+                    <th scope="col" class="text-center">Overtime Hours</th>
+                    <th scope="col" class="text-center">Rate</th>
+                    <th scope="col">Remarks</th>
+                    <th scope="col" class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if history %}
+                    {% for rec in history %}
+                    <tr id="history-row-{{ rec.id }}">
+                        <!-- Period -->
+                        <td class="ps-4">
+                            <div class="fw-bold text-main">
+                                <i class="bi bi-calendar-check text-primary me-1"></i>
+                                {{ month_names[rec.month] }} {{ rec.year }}
+                            </div>
+                            <span class="text-muted fs-xs">{{ rec.year }}-{{ "%02d"|format(rec.month) }}</span>
+                        </td>
+
+                        <!-- Working Days -->
+                        <td class="text-center">
+                            <span class="badge bg-body-tertiary text-main border">
+                                {{ rec.total_working_days }} days
+                            </span>
+                        </td>
+
+                        <!-- Days Worked -->
+                        <td class="text-center">
+                            <span class="fw-bold text-main">{{ rec.present_days }}</span>
+                            {% if rec.total_working_days > 0 %}
+                            <div class="text-muted fs-xs">
+                                {{ ((rec.present_days / rec.total_working_days) * 100)|round(1) }}%
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Paid Leaves -->
+                        <td class="text-center">
+                            {% if rec.paid_leaves > 0 %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    {{ rec.paid_leaves }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">0.0</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Unpaid Leaves -->
+                        <td class="text-center">
+                            {% if rec.unpaid_leaves > 0 %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle" title="Subject to salary deduction in payroll">
+                                    {{ rec.unpaid_leaves }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">0.0</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Total Leaves -->
+                        <td class="text-center">
+                            <span class="fw-semibold text-main">{{ rec.total_leaves }}</span>
+                            {% if rec.absent_days > 0 %}
+                            <div class="text-danger fs-xs" title="Unexcused absent days">
+                                +{{ rec.absent_days }} absent
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Overtime Hours -->
+                        <td class="text-center">
+                            {% if rec.overtime_hours > 0 %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                    {{ rec.overtime_hours }} hrs
+                                </span>
+                            {% else %}
+                                <span class="text-muted">&mdash;</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Overtime Rate -->
+                        <td class="text-center text-muted small">
+                            {{ rec.overtime_rate|currency }}/hr
+                        </td>
+
+                        <!-- Remarks -->
+                        <td>
+                            <span class="text-muted small text-truncate d-inline-block" style="max-width: 180px;" title="{{ rec.notes or 'No remarks recorded' }}">
+                                {{ rec.notes or '&mdash;' }}
+                            </span>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="text-end pe-4">
+                            <a href="{{ url_for('attendance.edit', attendance_id=rec.id) }}" class="btn btn-outline-primary btn-sm" title="Edit Record" id="btnEditHistory-{{ rec.id }}">
+                                <i class="bi bi-pencil-square"></i> Edit
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-5 text-muted">
+                            <i class="bi bi-calendar-x fs-2 d-block mb-2 text-secondary"></i>
+                            No historical attendance summaries logged yet for {{ employee.first_name }} {{ employee.last_name }}.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

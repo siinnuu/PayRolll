@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance & Leave Management | PayMaster Pro{% endblock %}
+
+{% block header_title %}Attendance & Leave Management{% endblock %}
+
+{% block content %}
+<!-- Page Header & Action Bar -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-calendar-check-fill me-1"></i> Module 4 Active
+            </span>
+            <span class="text-muted small">&bull; Monthly Reconciliation Ledger</span>
+        </div>
+        <h1 class="h2 fw-extrabold text-main mb-0">Attendance &amp; Leave Management</h1>
+        <p class="text-muted small mb-0">
+            Reconcile monthly employee working days, distinguish paid vs. unpaid leaves, monitor overtime hours, and inspect employee history.
+        </p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('attendance.add') }}" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnRecordAttendance">
+            <i class="bi bi-calendar-plus-fill"></i> Record Monthly Attendance
+        </a>
+    </div>
+</div>
+
+<!-- Attendance Analytics & Summary Cards -->
+<div class="row g-3 mb-4" id="attendanceSummaryCards">
+    <!-- Card 1: Records Count -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-primary">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Records Logged</span>
+                <div class="p-2 bg-primary-subtle text-primary rounded-3">
+                    <i class="bi bi-file-earmark-person fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1" id="statTotalRecords">{{ summary.total_records }}</h3>
+            <div class="d-flex align-items-center gap-1 text-muted small">
+                <span>Active employees recorded</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Average Attendance Rate -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-success">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Avg. Attendance Rate</span>
+                <div class="p-2 bg-success-subtle text-success rounded-3">
+                    <i class="bi bi-graph-up fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1 text-success" id="statAttendanceRate">{{ summary.attendance_rate }}%</h3>
+            <div class="progress mt-2" style="height: 6px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: {{ summary.attendance_rate }}%;" aria-valuenow="{{ summary.attendance_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Days Worked & Leaves Breakdown -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-info">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Days Worked &amp; Leaves</span>
+                <div class="p-2 bg-info-subtle text-info rounded-3">
+                    <i class="bi bi-calendar2-range fs-5"></i>
+                </div>
+            </div>
+            <div class="d-flex align-items-baseline gap-2 mb-1">
+                <h4 class="fw-bold mb-0" id="statPresentDays">{{ summary.total_present_days }} <span class="fs-xs fw-normal text-muted">worked</span></h4>
+            </div>
+            <div class="d-flex align-items-center gap-2 small">
+                <span class="badge bg-success-subtle text-success border border-success-subtle" title="Paid approved leaves">
+                    <i class="bi bi-check-circle me-1"></i>{{ summary.total_paid_leaves }} Paid
+                </span>
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle" title="Unpaid leaves (subject to salary deduction)">
+                    <i class="bi bi-exclamation-triangle me-1"></i>{{ summary.total_unpaid_leaves }} Unpaid
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Overtime Hours & Liability -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-warning">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Overtime Accrual</span>
+                <div class="p-2 bg-warning-subtle text-warning rounded-3">
+                    <i class="bi bi-clock-history fs-5"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold mb-1 text-main" id="statOvertimeHours">
+                {{ summary.total_overtime_hours }} <span class="fs-xs fw-normal text-muted">hours</span>
+            </h4>
+            <div class="text-muted small">
+                Est. OT Liability: <strong class="text-main">{{ summary.total_overtime_cost|currency }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filtering Toolbar -->
+<div class="glass-card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('attendance.index') }}" class="row g-2 align-items-center" id="attendanceFilterForm">
+        <!-- Search Input -->
+        <div class="col-md-4 col-lg-4">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-body-tertiary border-color text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input 
+                    type="text" 
+                    name="search" 
+                    class="form-control" 
+                    placeholder="Search employee code, name, department..." 
+                    value="{{ search_query }}"
+                    id="attendanceSearchInput"
+                >
+            </div>
+        </div>
+
+        <!-- Month Filter -->
+        <div class="col-6 col-sm-4 col-md-2">
+            <select name="month" class="form-select form-select-sm" id="monthFilterSelect" onchange="this.form.submit()">
+                <option value="">All Months</option>
+                {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>
+                        {{ month_names[m] }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Year Filter -->
+        <div class="col-6 col-sm-4 col-md-2">
+            <select name="year" class="form-select form-select-sm" id="yearFilterSelect" onchange="this.form.submit()">
+                <option value="">All Years</option>
+                {% for y in available_years %}
+                    <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>
+                        {{ y }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Employee Filter -->
+        <div class="col-sm-6 col-md-2">
+            <select name="employee_id" class="form-select form-select-sm" id="employeeFilterSelect" onchange="this.form.submit()">
+                <option value="">All Employees</option>
+                {% for emp in active_employees %}
+                    <option value="{{ emp.id }}" {% if selected_employee_id == emp.id %}selected{% endif %}>
+                        {{ emp.first_name }} {{ emp.last_name }} ({{ emp.employee_code }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Submit & Clear Buttons -->
+        <div class="col-sm-6 col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm px-3 flex-grow-1" id="btnFilterAttendance">
+                <i class="bi bi-funnel me-1"></i> Filter
+            </button>
+            {% if search_query or selected_year or selected_month or selected_employee_id %}
+            <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary btn-sm" id="btnClearFilter" title="Reset Filters">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Attendance Records Table -->
+<div class="glass-card shadow-sm overflow-hidden mb-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="attendanceTable">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th scope="col" class="ps-4">Employee</th>
+                    <th scope="col">Payroll Period</th>
+                    <th scope="col" class="text-center">Working Days</th>
+                    <th scope="col" class="text-center">Days Worked</th>
+                    <th scope="col" class="text-center">Paid Leaves</th>
+                    <th scope="col" class="text-center">Unpaid Leaves</th>
+                    <th scope="col" class="text-center">Total Leaves</th>
+                    <th scope="col" class="text-center">Overtime</th>
+                    <th scope="col" class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if records %}
+                    {% for rec in records %}
+                    <tr id="row-attendance-{{ rec.id }}">
+                        <!-- Employee Info -->
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-circle-sm bg-primary-subtle text-primary fw-bold">
+                                    {{ rec.first_name[0] }}{{ rec.last_name[0] }}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-main">
+                                        <a href="{{ url_for('attendance.employee_history', employee_id=rec.employee_id) }}" class="text-decoration-none text-main hover-primary">
+                                            {{ rec.first_name }} {{ rec.last_name }}
+                                        </a>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-secondary-subtle text-secondary fs-xs">{{ rec.employee_code }}</span>
+                                        <span class="text-muted fs-xs">{{ rec.department }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Period -->
+                        <td>
+                            <div class="d-flex align-items-center gap-1 fw-semibold text-main">
+                                <i class="bi bi-calendar3 text-muted me-1"></i>
+                                {{ month_names[rec.month] }} {{ rec.year }}
+                            </div>
+                            <span class="text-muted fs-xs">{{ rec.year }}-{{ "%02d"|format(rec.month) }}</span>
+                        </td>
+
+                        <!-- Configured Working Days -->
+                        <td class="text-center">
+                            <span class="badge bg-body-tertiary text-main border px-2 py-1">
+                                {{ rec.total_working_days }} days
+                            </span>
+                        </td>
+
+                        <!-- Days Worked (Present Days) -->
+                        <td class="text-center">
+                            <div class="fw-bold text-main">{{ rec.present_days }}</div>
+                            {% if rec.total_working_days > 0 %}
+                            <div class="text-muted fs-xs">
+                                {{ ((rec.present_days / rec.total_working_days) * 100)|round(1) }}%
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Paid Leaves -->
+                        <td class="text-center">
+                            {% if rec.paid_leaves > 0 %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" title="Approved paid leave (no pay deduction)">
+                                    <i class="bi bi-check me-1"></i>{{ rec.paid_leaves }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">0.0</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Unpaid Leaves -->
+                        <td class="text-center">
+                            {% if rec.unpaid_leaves > 0 %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1" title="Unpaid leave (deducted in payroll)">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>{{ rec.unpaid_leaves }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">0.0</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Total Leaves -->
+                        <td class="text-center">
+                            <span class="fw-semibold text-main">{{ rec.total_leaves }}</span>
+                            {% if rec.absent_days > 0 %}
+                            <div class="text-danger fs-xs" title="Unexcused / unaccounted absent days">
+                                +{{ rec.absent_days }} absent
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Overtime -->
+                        <td class="text-center">
+                            {% if rec.overtime_hours > 0 %}
+                                <div class="fw-semibold text-primary">
+                                    <i class="bi bi-lightning-charge-fill me-1"></i>{{ rec.overtime_hours }} hrs
+                                </div>
+                                <div class="text-muted fs-xs">@ {{ rec.overtime_rate|currency }}/hr</div>
+                            {% else %}
+                                <span class="text-muted">&mdash;</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Action Buttons -->
+                        <td class="text-end pe-4">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('attendance.edit', attendance_id=rec.id) }}" class="btn btn-outline-primary" title="Edit Monthly Record" id="btnEdit-{{ rec.id }}">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                                <a href="{{ url_for('attendance.employee_history', employee_id=rec.employee_id) }}" class="btn btn-outline-secondary" title="View Full Attendance History" id="btnHistory-{{ rec.employee_id }}">
+                                    <i class="bi bi-clock-history"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center justify-content-center">
+                                <div class="p-3 bg-body-tertiary rounded-circle text-muted mb-3" style="width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="bi bi-calendar-x fs-2"></i>
+                                </div>
+                                <h5 class="fw-bold text-main mb-1">No Attendance Records Found</h5>
+                                <p class="text-muted small mb-3" style="max-width: 460px;">
+                                    {% if search_query or selected_year or selected_month or selected_employee_id %}
+                                        No records match your selected search or period filters. Try resetting the filters or record attendance for this period.
+                                    {% else %}
+                                        No monthly attendance has been recorded yet. Click below to add the first monthly attendance record for an employee.
+                                    {% endif %}
+                                </p>
+                                <div class="d-flex gap-2">
+                                    {% if search_query or selected_year or selected_month or selected_employee_id %}
+                                    <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary btn-sm px-3">
+                                        <i class="bi bi-arrow-clockwise me-1"></i> Clear Filters
+                                    </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('attendance.add') }}" class="btn btn-primary btn-sm px-3">
+                                        <i class="bi bi-calendar-plus-fill me-1"></i> Record Attendance
+                                    </a>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    {% if total_count > 0 %}
+    <div class="p-3 border-top d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+        <div class="text-muted small">
+            Showing <strong>{{ ((page - 1) * per_page) + 1 }}</strong> to 
+            <strong>{{ (page * per_page) if (page * per_page) < total_count else total_count }}</strong> of 
+            <strong>{{ total_count }}</strong> monthly records
+        </div>
+
+        {% if total_pages > 1 %}
+        <nav aria-label="Attendance pagination">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('attendance.index', page=page-1, search=search_query, year=selected_year, month=selected_month, employee_id=selected_employee_id) }}" tabindex="-1" aria-disabled="{{ not has_prev }}">
+                        &laquo; Prev
+                    </a>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link">{{ p }}</span>
+                    </li>
+                    {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('attendance.index', page=p, search=search_query, year=selected_year, month=selected_month, employee_id=selected_employee_id) }}">
+                            {{ p }}
+                        </a>
+                    </li>
+                    {% elif p == 4 or p == total_pages - 3 %}
+                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('attendance.index', page=page+1, search=search_query, year=selected_year, month=selected_month, employee_id=selected_employee_id) }}">
+                        Next &raquo;
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

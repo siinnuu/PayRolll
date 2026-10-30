@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Salary Preview Engine | PayMaster Pro{% endblock %}
+
+{% block header_title %}Salary Preview &amp; Calculation Engine{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-calculator-fill me-1"></i> Module 5 Active
+            </span>
+            <span class="text-muted small">&bull; Preview &amp; Verification</span>
+        </div>
+        <h1 class="h2 fw-extrabold text-main mb-0">Salary Preview Engine</h1>
+        <p class="text-muted small mb-0">
+            Preview simulated salary calculations using actual employee compensation settings and reconciled attendance records from MySQL.
+        </p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('salary.index') }}" class="btn btn-outline-secondary px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" id="btnBackToSalaryConfig">
+            <i class="bi bi-gear-fill"></i> Salary Configurations
+        </a>
+    </div>
+</div>
+
+<!-- Selection Toolbar: Employee & Month / Year Filter -->
+<div class="glass-card p-3 p-md-4 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('salary.preview') }}" class="row g-3 align-items-end" id="salaryPreviewFilterForm">
+        <!-- Employee Select -->
+        <div class="col-md-4">
+            <label for="previewEmployeeSelect" class="form-label fw-semibold text-main small">
+                Select Employee <span class="text-danger">*</span>
+            </label>
+            <select name="employee_id" id="previewEmployeeSelect" class="form-select" required onchange="this.form.submit()">
+                <option value="">-- Choose Active Employee --</option>
+                {% for emp in active_employees %}
+                    <option value="{{ emp.id }}" {% if selected_employee_id == emp.id %}selected{% endif %}>
+                        {{ emp.first_name }} {{ emp.last_name }} ({{ emp.employee_code }}) - {{ emp.department }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Month Select -->
+        <div class="col-6 col-sm-4 col-md-3">
+            <label for="previewMonthSelect" class="form-label fw-semibold text-main small">
+                Payroll Month <span class="text-danger">*</span>
+            </label>
+            <select name="month" id="previewMonthSelect" class="form-select" required onchange="this.form.submit()">
+                {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>
+                        {{ month_names[m] }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Year Select -->
+        <div class="col-6 col-sm-4 col-md-2">
+            <label for="previewYearSelect" class="form-label fw-semibold text-main small">
+                Payroll Year <span class="text-danger">*</span>
+            </label>
+            <select name="year" id="previewYearSelect" class="form-select" required onchange="this.form.submit()">
+                {% for y in available_years %}
+                    <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>
+                        {{ y }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Action & Option Toggle -->
+        <div class="col-sm-4 col-md-3 d-flex flex-column gap-2">
+            <div class="form-check form-switch mb-1">
+                <input class="form-check-input" type="checkbox" name="allow_negative_net" value="1" id="checkAllowNegative" {% if allow_negative_net %}checked{% endif %} onchange="this.form.submit()">
+                <label class="form-check-label text-muted fs-xs" for="checkAllowNegative" title="Allow deductions to exceed gross earnings (debt balance)">
+                    Allow Negative Net Pay
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary w-100" id="btnRunPreview">
+                <i class="bi bi-calculator me-1"></i> Compute Preview
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Preview Results Area -->
+{% if preview_data %}
+    {% if preview_data.status == 'success' %}
+        {% set calc = preview_data.calculation %}
+        {% set emp = preview_data.employee %}
+        {% set att = preview_data.attendance %}
+        {% set scfg = preview_data.salary_settings %}
+
+        <!-- Employee Info Card -->
+        <div class="glass-card p-3 mb-4 shadow-sm">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-circle-md bg-primary-subtle text-primary fw-bold fs-4">
+                        {{ emp.first_name[0] }}{{ emp.last_name[0] }}
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h3 class="fw-bold text-main mb-0">{{ emp.first_name }} {{ emp.last_name }}</h3>
+                            <span class="badge bg-secondary-subtle text-secondary border fs-xs">{{ emp.employee_code }}</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-xs">
+                                <i class="bi bi-calendar3 me-1"></i> {{ month_names[selected_month] }} {{ selected_year }}
+                            </span>
+                        </div>
+                        <div class="text-muted small">
+                            {{ emp.designation }} &bull; {{ emp.department }} &bull; Joined {{ emp.joining_date }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{{ url_for('attendance.edit', attendance_id=att.id) }}" class="btn btn-outline-secondary btn-sm" title="Inspect Monthly Attendance">
+                        <i class="bi bi-calendar-check me-1"></i> Edit Attendance
+                    </a>
+                    <a href="{{ url_for('salary.edit', employee_id=emp.id) }}" class="btn btn-outline-secondary btn-sm" title="Edit Salary Structure">
+                        <i class="bi bi-pencil-square me-1"></i> Edit Salary
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 Key Financial KPI Cards -->
+        <div class="row g-3 mb-4">
+            <!-- 1. Basic Salary -->
+            <div class="col-sm-6 col-lg-3">
+                <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-secondary">
+                    <span class="text-muted small fw-semibold text-uppercase">Basic Salary</span>
+                    <h3 class="fw-bold my-1 text-main" id="previewKpiBasic">{{ calc.basic_salary|currency }}</h3>
+                    <span class="text-muted fs-xs">Base compensation rate</span>
+                </div>
+            </div>
+
+            <!-- 2. Gross Salary -->
+            <div class="col-sm-6 col-lg-3">
+                <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-info">
+                    <span class="text-muted small fw-semibold text-uppercase">Gross Earnings</span>
+                    <h3 class="fw-bold my-1 text-info" id="previewKpiGross">{{ calc.gross_salary|currency }}</h3>
+                    <span class="text-muted fs-xs">Basic + Allowances + Overtime</span>
+                </div>
+            </div>
+
+            <!-- 3. Total Deductions -->
+            <div class="col-sm-6 col-lg-3">
+                <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-danger">
+                    <span class="text-muted small fw-semibold text-uppercase">Total Deductions</span>
+                    <h3 class="fw-bold my-1 text-danger" id="previewKpiDeductions">-{{ calc.total_deductions|currency }}</h3>
+                    <span class="text-muted fs-xs">Leave deduction + Other</span>
+                </div>
+            </div>
+
+            <!-- 4. Net Salary (Final Take-Home) -->
+            <div class="col-sm-6 col-lg-3">
+                <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-success bg-success-subtle bg-opacity-10">
+                    <span class="text-muted small fw-semibold text-uppercase">Net Monthly Salary</span>
+                    <h3 class="fw-extrabold my-1 text-success fs-3" id="previewKpiNet">{{ calc.net_salary|currency }}</h3>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle fs-xs">
+                        Take-Home Pay
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Breakdown Grid (Two Columns) -->
+        <div class="row g-4 mb-4">
+            <!-- Column 1: Earnings & Additions Breakdown -->
+            <div class="col-lg-6">
+                <div class="glass-card p-4 h-100 shadow-sm">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
+                        <h5 class="fw-bold text-main mb-0 d-flex align-items-center gap-2">
+                            <i class="bi bi-plus-circle-fill text-success"></i> Gross Salary Additions
+                        </h5>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle">Earnings</span>
+                    </div>
+
+                    <table class="table table-sm align-middle mb-0" id="earningsTable">
+                        <tbody>
+                            <!-- Basic Salary -->
+                            <tr>
+                                <td class="py-2">
+                                    <div class="fw-semibold text-main">Basic Monthly Salary</div>
+                                    <span class="text-muted fs-xs">Fixed monthly base wage</span>
+                                </td>
+                                <td class="text-end py-2 fw-bold text-main" id="breakdownBasic">
+                                    {{ calc.basic_salary|currency }}
+                                </td>
+                            </tr>
+
+                            <!-- Monthly Allowances -->
+                            <tr>
+                                <td class="py-2">
+                                    <div class="fw-semibold text-main">Monthly Allowances (Total)</div>
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        <span class="badge bg-secondary-subtle text-secondary fs-xs">HRA: {{ scfg.hra|currency }}</span>
+                                        <span class="badge bg-secondary-subtle text-secondary fs-xs">Transport: {{ scfg.transport_allowance|currency }}</span>
+                                        <span class="badge bg-secondary-subtle text-secondary fs-xs">Medical: {{ scfg.medical_allowance|currency }}</span>
+                                        {% if scfg.other_allowances > 0 %}
+                                        <span class="badge bg-secondary-subtle text-secondary fs-xs">Other: {{ scfg.other_allowances|currency }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="text-end py-2 fw-semibold text-success" id="breakdownAllowances">
+                                    +{{ calc.allowances|currency }}
+                                </td>
+                            </tr>
+
+                            <!-- Overtime Payment -->
+                            <tr>
+                                <td class="py-2">
+                                    <div class="fw-semibold text-main">Overtime Payment</div>
+                                    <span class="text-muted fs-xs">
+                                        {{ calc.overtime_hours }} hrs &times; {{ calc.overtime_rate|currency }}/hr
+                                        <span class="badge bg-body-tertiary text-muted ms-1">({{ preview_data.ot_rate_source }})</span>
+                                    </span>
+                                </td>
+                                <td class="text-end py-2 fw-semibold text-primary" id="breakdownOvertime">
+                                    +{{ calc.overtime_payment|currency }}
+                                </td>
+                            </tr>
+
+                            <!-- Total Gross -->
+                            <tr class="table-light border-top">
+                                <td class="py-3 fw-bold text-main">Gross Salary Total</td>
+                                <td class="text-end py-3 fw-extrabold text-info fs-5" id="breakdownGross">
+                                    {{ calc.gross_salary|currency }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Column 2: Attendance & Deductions Breakdown -->
+            <div class="col-lg-6">
+                <div class="glass-card p-4 h-100 shadow-sm">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
+                        <h5 class="fw-bold text-main mb-0 d-flex align-items-center gap-2">
+                            <i class="bi bi-dash-circle-fill text-danger"></i> Deductions &amp; Attendance
+                        </h5>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Subtractions</span>
+                    </div>
+
+                    <table class="table table-sm align-middle mb-0" id="deductionsTable">
+                        <tbody>
+                            <!-- Daily Salary Rate -->
+                            <tr>
+                                <td class="py-2">
+                                    <div class="fw-semibold text-main">Daily Salary Rate</div>
+                                    <span class="text-muted fs-xs">
+                                        Basic ({{ calc.basic_salary|currency }}) &divide; Working Days ({{ calc.total_working_days }})
+                                    </span>
+                                </td>
+                                <td class="text-end py-2 fw-bold text-main" id="breakdownDailySalary">
+                                    {{ calc.daily_salary|currency }} <span class="fs-xs fw-normal text-muted">/ day</span>
+                                </td>
+                            </tr>
+
+                            <!-- Paid Leaves (Explicit Rule: 0 Deduction) -->
+                            <tr>
+                                <td class="py-2">
+                                    <div class="fw-semibold text-main">Paid Leave Days</div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle fs-xs">
+                                        {{ calc.paid_leave_days }} days approved &bull; Salary Preserved
+                                    </span>
+                                </td>
+                                <td class="text-end py-2 text-muted fw-semibold" id="breakdownPaidLeaves">
+                                    $0.00
+                                </td>
+                            </tr>
+
+                            <!-- Unpaid Leave Deduction -->
+                            <tr>
+                                <td class="py-2">
+                                    <div class="fw-semibold text-main">Unpaid Leave Deduction</div>
+                                    <span class="text-muted fs-xs">
+                                        {{ calc.unpaid_leave_days }} unpaid days &times; Daily Salary ({{ calc.daily_salary|currency }})
+                                    </span>
+                                </td>
+                                <td class="text-end py-2 fw-semibold text-danger" id="breakdownLeaveDeduction">
+                                    -{{ calc.leave_deduction|currency }}
+                                </td>
+                            </tr>
+
+                            <!-- Other Deductions -->
+                            <tr>
+                                <td class="py-2">
+                                    <div class="fw-semibold text-main">Other Fixed Deductions</div>
+                                    <span class="text-muted fs-xs">Standard monthly configured deductions</span>
+                                </td>
+                                <td class="text-end py-2 fw-semibold text-danger" id="breakdownOtherDeductions">
+                                    -{{ calc.other_deductions|currency }}
+                                </td>
+                            </tr>
+
+                            <!-- Total Deductions -->
+                            <tr class="table-light border-top">
+                                <td class="py-3 fw-bold text-main">Total Deductions</td>
+                                <td class="text-end py-3 fw-extrabold text-danger fs-5" id="breakdownTotalDeductions">
+                                    -{{ calc.total_deductions|currency }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Academic Demonstration & Calculation Rules Explanation Card -->
+        <div class="glass-card p-4 shadow-sm mb-4 border-start border-4 border-primary">
+            <h5 class="fw-bold text-main mb-2 d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle-fill text-primary"></i> Configured Salary Calculation Rules (Academic Demonstration)
+            </h5>
+            <p class="text-muted small mb-3">
+                <em>Note: The formulas executed below are academic demonstration rules for payroll computation modeling, not an official statement of statutory compliance.</em>
+            </p>
+
+            <div class="row g-3 small">
+                <div class="col-md-6">
+                    <div class="p-3 bg-body-tertiary rounded-3 border">
+                        <strong class="text-main">1. Daily Salary &amp; Leave Deduction:</strong>
+                        <ul class="mb-0 mt-1 ps-3 text-muted">
+                            <li><code>Daily Salary = Basic / Total Working Days</code></li>
+                            <li><strong>Result:</strong> {{ calc.formula_explanations.daily_salary }}</li>
+                            <li><code>Leave Deduction = Daily Salary &times; Unpaid Leave Days</code></li>
+                            <li><strong>Result:</strong> {{ calc.formula_explanations.leave_deduction }}</li>
+                            <li class="text-success fw-semibold">Paid leave days do NOT reduce salary.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="p-3 bg-body-tertiary rounded-3 border">
+                        <strong class="text-main">2. Gross, Overtime &amp; Net Salary:</strong>
+                        <ul class="mb-0 mt-1 ps-3 text-muted">
+                            <li><code>Overtime Payment = OT Hours &times; Overtime Rate</code></li>
+                            <li><strong>Result:</strong> {{ calc.formula_explanations.overtime_payment }}</li>
+                            <li><code>Gross = Basic + Allowances + Overtime Payment</code></li>
+                            <li><code>Total Deductions = Leave Deduction + Other Deductions</code></li>
+                            <li><code>Net Salary = Gross - Total Deductions</code> = <strong class="text-success">{{ calc.net_salary|currency }}</strong></li>
+                            <li><strong>Rounding:</strong> {{ calc.formula_explanations.rounding_policy }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif preview_data.status == 'missing_attendance' %}
+        <!-- Missing Attendance Warning Callout -->
+        <div class="glass-card p-5 text-center shadow-sm mb-4">
+            <div class="p-3 bg-warning-subtle text-warning rounded-circle d-inline-flex mb-3" style="width: 64px; height: 64px; align-items: center; justify-content: center;">
+                <i class="bi bi-calendar-x-fill fs-2"></i>
+            </div>
+            <h4 class="fw-bold text-main mb-2">Monthly Attendance Record Required</h4>
+            <p class="text-muted mx-auto mb-4" style="max-width: 540px;">
+                {{ preview_data.error_message }}
+                <br>
+                Salary calculations integrate with actual attendance records to determine working days, unpaid leaves, and overtime hours.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{{ url_for('attendance.add', employee_id=selected_employee_id, year=selected_year, month=selected_month) }}" class="btn btn-primary px-4 py-2" id="btnRecordAttendanceForPreview">
+                    <i class="bi bi-calendar-plus-fill me-1"></i> Record Attendance for {{ month_names[selected_month] }} {{ selected_year }}
+                </a>
+                <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary px-4 py-2">
+                    View Attendance Ledger
+                </a>
+            </div>
+        </div>
+
+    {% elif preview_data.status == 'missing_salary_settings' %}
+        <!-- Missing Salary Settings Callout -->
+        <div class="glass-card p-5 text-center shadow-sm mb-4">
+            <div class="p-3 bg-info-subtle text-info rounded-circle d-inline-flex mb-3" style="width: 64px; height: 64px; align-items: center; justify-content: center;">
+                <i class="bi bi-gear-fill fs-2"></i>
+            </div>
+            <h4 class="fw-bold text-main mb-2">Salary Structure Not Configured</h4>
+            <p class="text-muted mx-auto mb-4" style="max-width: 540px;">
+                {{ preview_data.error_message }}
+            </p>
+            <a href="{{ url_for('salary.edit', employee_id=selected_employee_id) }}" class="btn btn-primary px-4 py-2">
+                <i class="bi bi-pencil-square me-1"></i> Configure Salary Structure
+            </a>
+        </div>
+
+    {% elif preview_data.status == 'calculation_error' %}
+        <!-- Calculation Error Callout -->
+        <div class="glass-card p-5 text-center shadow-sm mb-4 border-danger">
+            <div class="p-3 bg-danger-subtle text-danger rounded-circle d-inline-flex mb-3" style="width: 64px; height: 64px; align-items: center; justify-content: center;">
+                <i class="bi bi-exclamation-triangle-fill fs-2"></i>
+            </div>
+            <h4 class="fw-bold text-danger mb-2">Calculation Rule Violation</h4>
+            <p class="text-muted mx-auto mb-4" style="max-width: 540px;">
+                {{ preview_data.error_message }}
+            </p>
+            <div class="d-flex justify-content-center gap-2">
+                <a href="{{ url_for('salary.preview', employee_id=selected_employee_id, year=selected_year, month=selected_month, allow_negative_net=1) }}" class="btn btn-warning px-4 py-2">
+                    <i class="bi bi-toggle-on me-1"></i> Enable Negative Net Pay Override
+                </a>
+            </div>
+        </div>
+    {% endif %}
+{% else %}
+    <div class="glass-card p-5 text-center shadow-sm mb-4 text-muted">
+        <i class="bi bi-person-badge fs-1 mb-2 d-block"></i>
+        Please select an employee and payroll period above to view their salary preview.
+    </div>
+{% endif %}
+
+{% endblock %}

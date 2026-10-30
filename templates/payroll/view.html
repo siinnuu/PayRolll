@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Payslip Statement - {{ payroll.payroll_code }} | PayMaster Pro{% endblock %}
+
+{% block header_title %}Monthly Payslip Statement{% endblock %}
+
+{% block content %}
+<!-- Page Header & Action Controls -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 d-print-none">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('payroll.index') }}" class="text-decoration-none text-muted small hover-primary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Payroll Ledger
+            </a>
+            <span class="text-muted small">&bull; Statement Details</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <h1 class="h2 fw-extrabold text-main mb-0 font-monospace">{{ payroll.payroll_code }}</h1>
+            <!-- Status Badge -->
+            {% if payroll.status == 'DRAFT' %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-clock-history me-1"></i> Draft Statement
+                </span>
+            {% elif payroll.status == 'APPROVED' %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-check2-circle me-1"></i> Approved
+                </span>
+            {% elif payroll.status == 'PAID' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-patch-check-fill me-1"></i> Disbursed / Paid
+                </span>
+            {% elif payroll.status == 'CANCELLED' %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-x-circle me-1"></i> Cancelled
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Status Action Buttons -->
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary px-3 py-2 rounded-3 shadow-sm" onclick="window.print()" id="btnPrintPayslip">
+            <i class="bi bi-printer me-1"></i> Print Payslip
+        </button>
+
+        {% if payroll.status in ('DRAFT', 'GENERATED') %}
+            <!-- Approve Button -->
+            <form method="POST" action="{{ url_for('payroll.update_status', payroll_id=payroll.id) }}" class="d-inline" onsubmit="return confirm('Approve payroll statement {{ payroll.payroll_code }}? This finalizes the snapshot for disbursement.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="approve">
+                <button type="submit" class="btn btn-success px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnApprovePayroll">
+                    <i class="bi bi-check-circle-fill"></i> Approve Payroll
+                </button>
+            </form>
+
+            <!-- Cancel Button -->
+            <form method="POST" action="{{ url_for('payroll.update_status', payroll_id=payroll.id) }}" class="d-inline" onsubmit="return confirm('Void and cancel draft payroll {{ payroll.payroll_code }}?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="cancel">
+                <button type="submit" class="btn btn-outline-danger px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnCancelPayroll">
+                    <i class="bi bi-x-circle"></i> Cancel Draft
+                </button>
+            </form>
+        {% elif payroll.status == 'APPROVED' %}
+            <!-- Reopen for Adjustment Trigger -->
+            <button type="button" class="btn btn-warning px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#reopenModal" id="btnReopenModal">
+                <i class="bi bi-arrow-counterclockwise"></i> Reopen for Adjustment
+            </button>
+        {% elif payroll.status == 'PAID' %}
+            <span class="badge bg-success-subtle text-success p-2 d-inline-flex align-items-center gap-1 border border-success-subtle">
+                <i class="bi bi-lock-fill"></i> Financial records locked
+            </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Formal Payslip Document Card -->
+<div class="glass-card shadow-lg p-4 p-md-5 mb-4" id="printablePayslip">
+    <!-- Corporate Header -->
+    <div class="row align-items-center pb-4 mb-4 border-bottom">
+        <div class="col-sm-7">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="p-2 rounded-3 bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="bi bi-cash-stack fs-4"></i>
+                </div>
+                <h3 class="fw-extrabold text-main mb-0 tracking-tight">PayMaster Pro</h3>
+            </div>
+            <p class="text-muted small mb-0">
+                Enterprise Payroll &amp; Human Resources Management System<br>
+                Official Monthly Salary Statement &bull; Confidential
+            </p>
+        </div>
+
+        <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
+            <div class="p-3 bg-body-tertiary rounded-3 border d-inline-block text-start">
+                <div class="text-muted fs-xs text-uppercase fw-semibold">Statement Reference</div>
+                <div class="font-monospace fw-bold text-primary">{{ payroll.payroll_code }}</div>
+                <div class="text-muted fs-xs mt-1">Generated: {{ payroll.generated_date }}</div>
+                <div class="text-muted fs-xs">Period: <strong>{{ month_names.get(payroll.month, payroll.month) }} {{ payroll.year }}</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee & Period Information Grid -->
+    <div class="row g-4 mb-4">
+        <!-- Employee Details -->
+        <div class="col-md-6">
+            <div class="p-3 bg-body-tertiary rounded-3 border h-100">
+                <h6 class="fw-bold text-uppercase text-muted fs-xs mb-3 border-bottom pb-2">
+                    <i class="bi bi-person me-1"></i> Employee Profile
+                </h6>
+                <div class="row g-2 small">
+                    <div class="col-4 text-muted">Full Name:</div>
+                    <div class="col-8 fw-semibold text-main">{{ payroll.full_name }}</div>
+
+                    <div class="col-4 text-muted">Staff Code:</div>
+                    <div class="col-8 font-monospace fw-semibold">{{ payroll.employee_code }}</div>
+
+                    <div class="col-4 text-muted">Department:</div>
+                    <div class="col-8 text-main">{{ payroll.department }}</div>
+
+                    <div class="col-4 text-muted">Job Title:</div>
+                    <div class="col-8 text-main">{{ payroll.designation }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Summary Reference -->
+        <div class="col-md-6">
+            <div class="p-3 bg-body-tertiary rounded-3 border h-100">
+                <h6 class="fw-bold text-uppercase text-muted fs-xs mb-3 border-bottom pb-2">
+                    <i class="bi bi-calendar3 me-1"></i> Monthly Attendance Reconciliation
+                </h6>
+                {% if attendance %}
+                <div class="row g-2 small">
+                    <div class="col-6 text-muted">Total Working Days:</div>
+                    <div class="col-6 fw-semibold text-main">{{ attendance.total_working_days }} days</div>
+
+                    <div class="col-6 text-muted">Days Worked:</div>
+                    <div class="col-6 fw-semibold text-success">{{ attendance.days_worked }} days</div>
+
+                    <div class="col-6 text-muted">Paid Leave Days:</div>
+                    <div class="col-6 fw-semibold text-info">{{ attendance.paid_leave_days }} days</div>
+
+                    <div class="col-6 text-muted">Unpaid Leave Days:</div>
+                    <div class="col-6 fw-semibold text-danger">{{ attendance.unpaid_leave_days }} days</div>
+
+                    <div class="col-6 text-muted">Overtime Logged:</div>
+                    <div class="col-6 fw-semibold text-primary">{{ attendance.overtime_hours }} hours</div>
+                </div>
+                {% else %}
+                <div class="text-muted small py-3">
+                    <i class="bi bi-info-circle me-1"></i> Attendance was verified at calculation time.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Salary Breakdown Table (INR ₹) -->
+    <div class="row g-4 mb-4">
+        <!-- Earnings Breakdown -->
+        <div class="col-md-6">
+            <div class="card border rounded-3 overflow-hidden h-100">
+                <div class="card-header bg-success-subtle text-success fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-plus-circle me-1"></i> Earnings &amp; Allowances</span>
+                    <span class="fs-xs text-uppercase">Credit</span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Basic Salary (Snapshot)</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-main">{{ payroll.basic_pay|inr }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Monthly Allowances Pool</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-success">+{{ payroll.allowances_total|inr }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Overtime Compensation</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-success">+{{ payroll.overtime_pay|inr }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="border-top table-light">
+                            <tr>
+                                <th class="ps-3 py-2 fw-bold text-main">Total Gross Salary</th>
+                                <th class="pe-3 py-2 text-end fw-bold text-success fs-6">{{ payroll.gross_pay|inr }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deductions Breakdown -->
+        <div class="col-md-6">
+            <div class="card border rounded-3 overflow-hidden h-100">
+                <div class="card-header bg-danger-subtle text-danger fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-dash-circle me-1"></i> Deductions &amp; Recoveries</span>
+                    <span class="fs-xs text-uppercase">Debit</span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Unpaid Leave Deduction</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-danger">-{{ payroll.leave_deduction|inr }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Other Fixed Deductions</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-danger">-{{ payroll.other_deductions|inr }}</td>
+                            </tr>
+                            {% if payroll.tax_deduction and payroll.tax_deduction > 0 %}
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Withholding Tax</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-danger">-{{ payroll.tax_deduction|inr }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if payroll.pf_deduction and payroll.pf_deduction > 0 %}
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Provident Fund</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-danger">-{{ payroll.pf_deduction|inr }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                        <tfoot class="border-top table-light">
+                            <tr>
+                                <th class="ps-3 py-2 fw-bold text-main">Total Deductions</th>
+                                <th class="pe-3 py-2 text-end fw-bold text-danger fs-6">-{{ payroll.total_deductions|inr }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Net Pay Callout Banner (INR ₹) -->
+    <div class="p-4 rounded-3 bg-primary-subtle border border-primary-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+        <div>
+            <span class="text-primary text-uppercase fw-bold fs-xs tracking-wider d-block">Official Net Disbursement</span>
+            <span class="text-muted small">Final take-home pay credited to employee account</span>
+        </div>
+        <div class="text-sm-end">
+            <span class="h1 fw-extrabold text-primary mb-0 font-monospace" id="statementNetPay">
+                {{ payroll.net_pay|inr }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Audit Remarks & Compliance Footer -->
+    <div class="p-3 bg-light rounded-3 border small">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-bold text-muted text-uppercase fs-xs">Audit Memo &amp; Trail</span>
+            <span class="text-muted fs-xs">Record ID: #{{ payroll.id }} &bull; Updated: {{ payroll.updated_at }}</span>
+        </div>
+        <div class="text-main fst-italic">
+            {{ payroll.remarks or 'Standard monthly payroll run calculation.' }}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Reopen Approved Payroll for Adjustment -->
+{% if payroll.status == 'APPROVED' %}
+<div class="modal fade" id="reopenModal" tabindex="-1" aria-labelledby="reopenModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('payroll.update_status', payroll_id=payroll.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="reopen">
+
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="reopenModalLabel">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                        Reopen Approved Payroll Statement
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">
+                        Reopening statement <strong>{{ payroll.payroll_code }}</strong> reverts its status from <code>APPROVED</code> back to <code>DRAFT</code>.
+                        An explicit audit explanation is mandatory for compliance.
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="inputAdjustmentReason" class="form-label fw-semibold small">Correction / Adjustment Reason <span class="text-danger">*</span></label>
+                        <textarea name="reason" id="inputAdjustmentReason" class="form-control" rows="3" required placeholder="e.g. Attendance hours correction per HR memo dated..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning" id="btnConfirmReopen">
+                        Reopen as Draft
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+@media print {
+    .d-print-none, .sidebar, .navbar-custom, footer {
+        display: none !important;
+    }
+    .app-main {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    #printablePayslip {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+}
+</style>
+{% endblock %}

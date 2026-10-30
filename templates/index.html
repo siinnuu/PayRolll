@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Employee Payroll Management System{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-card p-4 p-md-5 mb-4 position-relative">
+    <div class="hero-glow"></div>
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="feature-badge"><i class="bi bi-shield-check me-1"></i> Module 1 Foundation Complete</span>
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill">Python Flask & MySQL</span>
+            </div>
+            <h1 class="display-6 fw-extrabold mb-2 text-main">
+                Employee Payroll Management System
+            </h1>
+            <p class="lead text-muted mb-4" style="max-width: 680px;">
+                Robust enterprise architecture built with the Flask application factory pattern, connection pooling, 
+                ACID transactions, and a 6-table normalized MySQL schema with historical record preservation.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('health.health_check') }}" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="heroDiagnosticsBtn">
+                    <i class="bi bi-heart-pulse-fill"></i> View System Health
+                </a>
+                <a href="{{ url_for('health.api_health') }}" target="_blank" class="btn btn-outline-secondary px-4 py-2 rounded-3 d-inline-flex align-items-center gap-2" id="heroApiBtn">
+                    <i class="bi bi-code-slash"></i> Health API JSON
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-4 mt-4 mt-lg-0 text-lg-end">
+            <div class="p-3 glass-card d-inline-block text-start shadow-sm" style="min-width: 280px;">
+                <div class="text-muted small fw-semibold text-uppercase mb-2">Database Connection</div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold">MySQL Server</span>
+                    {% if db_status.connected %}
+                        <span class="status-pill status-online" id="live-db-badge">
+                            <span class="status-dot"></span> Connected
+                        </span>
+                    {% else %}
+                        <span class="status-pill status-warning" id="live-db-badge">
+                            <span class="status-dot"></span> Needs Config
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="small text-muted" id="live-db-message">
+                    {{ db_status.message }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Architecture Core Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="glass-card p-3 h-100">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 rounded-3 bg-primary-subtle text-primary fs-4">
+                    <i class="bi bi-diagram-3"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Application Pattern</div>
+                    <div class="fw-bold fs-5">Application Factory</div>
+                    <div class="text-muted small"><code>create_app()</code> in app.py</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="glass-card p-3 h-100">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 rounded-3 bg-success-subtle text-success fs-4">
+                    <i class="bi bi-database"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Database Engine</div>
+                    <div class="fw-bold fs-5">MySQL (InnoDB)</div>
+                    <div class="text-muted small">UTF-8 MB4 Unicode</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="glass-card p-3 h-100">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 rounded-3 bg-info-subtle text-info fs-4">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Monetary Precision</div>
+                    <div class="fw-bold fs-5">DECIMAL(12, 2)</div>
+                    <div class="text-muted small">No float rounding errors</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+        <div class="glass-card p-3 h-100">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 rounded-3 bg-warning-subtle text-warning fs-4">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Password Security</div>
+                    <div class="fw-bold fs-5">Scrypt / PBKDF2</div>
+                    <div class="text-muted small">Zero plaintext storage</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schema Architecture Overview -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-main">
+                    <i class="bi bi-table text-primary me-2"></i> Relational Database Schema (Module 1)
+                </h5>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">6 Tables Designed</span>
+            </div>
+            <p class="text-muted small mb-3">
+                All tables utilize InnoDB for ACID transaction integrity, strict foreign key references, and 
+                <code>ON DELETE RESTRICT</code> to preserve historical payroll and disbursement logs when employees become inactive.
+            </p>
+
+            <div class="table-responsive">
+                <table class="table custom-table table-hover align-middle mb-0" id="schemaTableList">
+                    <thead>
+                        <tr>
+                            <th>Table Name</th>
+                            <th>Description</th>
+                            <th>Key Constraints & Types</th>
+                            <th>Engine</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for table in tables %}
+                        <tr>
+                            <td>
+                                <span class="fw-bold font-mono text-primary">{{ table.name }}</span>
+                            </td>
+                            <td class="small text-muted">{{ table.desc }}</td>
+                            <td>
+                                {% if table.name == 'users' %}
+                                    <span class="badge bg-secondary-subtle text-secondary small">UNIQUE(username, email)</span>
+                                {% elif table.name == 'employees' %}
+                                    <span class="badge bg-secondary-subtle text-secondary small">UNIQUE(employee_code)</span>
+                                    <span class="badge bg-info-subtle text-info small">FK user_id</span>
+                                {% elif table.name == 'attendance' %}
+                                    <span class="badge bg-warning-subtle text-warning small">UNIQUE(employee_id, year, month)</span>
+                                {% elif table.name == 'salary_settings' %}
+                                    <span class="badge bg-secondary-subtle text-secondary small">DECIMAL(12,2)</span>
+                                    <span class="badge bg-info-subtle text-info small">FK employee_id</span>
+                                {% elif table.name == 'payroll' %}
+                                    <span class="badge bg-danger-subtle text-danger small">UNIQUE(employee_id, year, month)</span>
+                                    <span class="badge bg-secondary-subtle text-secondary small">DECIMAL(12,2)</span>
+                                {% elif table.name == 'payments' %}
+                                    <span class="badge bg-success-subtle text-success small">UNIQUE(payment_reference)</span>
+                                    <span class="badge bg-info-subtle text-info small">FK payroll_id (RESTRICT)</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-dark-subtle text-dark border">{{ table.engine }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Windows CLI Runner -->
+    <div class="col-lg-4">
+        <div class="glass-card p-4 h-100">
+            <h5 class="fw-bold mb-3 text-main">
+                <i class="bi bi-terminal text-primary me-2"></i> Windows PowerShell Setup
+            </h5>
+            <p class="text-muted small">
+                Run the following commands in Windows PowerShell to configure your environment:
+            </p>
+
+            <div class="terminal-window mb-3">
+                <div class="terminal-header">
+                    <div class="terminal-dots">
+                        <span class="terminal-dot dot-red"></span>
+                        <span class="terminal-dot dot-yellow"></span>
+                        <span class="terminal-dot dot-green"></span>
+                    </div>
+                    <span class="text-muted small font-mono">PowerShell</span>
+                </div>
+                <div class="terminal-body" id="powershellSnippet"># 1. Copy sample environment file
+Copy-Item .env.example .env
+
+# 2. Test database connection
+python -m flask ping-db
+
+# 3. Create tables & load seed data
+python -m flask init-db
+# or: python init_db.py
+
+# 4. Run automated test suite
+python -m pytest -v</div>
+            </div>
+
+            <button class="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center gap-2" data-copy-target="powershellSnippet" id="btnCopyCommands">
+                <i class="bi bi-clipboard"></i> Copy Setup Commands
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Roadmap / Project Modules -->
+<div class="glass-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-main">
+            <i class="bi bi-map text-primary me-2"></i> System Modular Roadmap
+        </h5>
+        <span class="text-muted small">Module 1 Active</span>
+    </div>
+
+    <div class="row g-3">
+        {% for mod in modules %}
+        <div class="col-md-6 col-lg-4">
+            <div class="p-3 border rounded-3 h-100 {% if mod.status == 'COMPLETED' %}bg-primary-subtle border-primary-subtle{% else %}bg-card border-color{% endif %}">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="fw-bold text-main">{{ mod.name }}</span>
+                    <span class="badge bg-{{ mod.badge_class }} rounded-pill">{{ mod.status }}</span>
+                </div>
+                <p class="small text-muted mb-0">{{ mod.description }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

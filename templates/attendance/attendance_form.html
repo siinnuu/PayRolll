@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if is_edit %}Edit Attendance Record #{{ attendance_id }}{% else %}Record Monthly Attendance{% endif %} | PayMaster Pro
+{% endblock %}
+
+{% block header_title %}Attendance &amp; Leave Management{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+        <!-- Breadcrumb & Navigation -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{{ url_for('attendance.index') }}" class="text-decoration-none">Attendance Ledger</a></li>
+                <li class="breadcrumb-item active" aria-current="page">
+                    {% if is_edit %}Edit Record #{{ attendance_id }}{% else %}Record Monthly Attendance{% endif %}
+                </li>
+            </ol>
+        </nav>
+
+        <!-- Main Card Form -->
+        <div class="glass-card shadow-sm p-4 p-md-5 mb-5">
+            <!-- Card Header -->
+            <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+                <div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-1">
+                        <i class="bi bi-clock-history me-1"></i> Module 4
+                    </span>
+                    <h2 class="h3 fw-extrabold text-main mb-0">
+                        {% if is_edit %}
+                            Edit Attendance Record
+                        {% else %}
+                            Record Monthly Attendance
+                        {% endif %}
+                    </h2>
+                    <p class="text-muted small mb-0">
+                        {% if is_edit %}
+                            Update working days, leave categories, and overtime for {{ record.first_name }} {{ record.last_name }} ({{ month_names[record.month] }} {{ record.year }}).
+                        {% else %}
+                            Record reconciled monthly attendance, categorize paid vs. unpaid leaves, and verify overtime hours.
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" id="btnCancelTop">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </a>
+            </div>
+
+            <!-- Server-Side Error Alert Banner -->
+            {% if errors %}
+            <div class="alert alert-danger d-flex align-items-start gap-2 shadow-sm mb-4" role="alert" id="formErrorBanner">
+                <i class="bi bi-exclamation-octagon-fill fs-5 flex-shrink-0 mt-1"></i>
+                <div class="small">
+                    <strong>Please resolve the following validation errors:</strong>
+                    <ul class="mb-0 mt-1 ps-3">
+                        {% for field, error_msg in errors.items() %}
+                            <li><strong>{{ field|replace('_', ' ')|title }}:</strong> {{ error_msg }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Form -->
+            <form method="POST" 
+                  action="{% if is_edit %}{{ url_for('attendance.edit', attendance_id=attendance_id) }}{% else %}{{ url_for('attendance.add') }}{% endif %}" 
+                  id="attendanceForm" 
+                  novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- SECTION 1: Employee & Payroll Period -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-main border-bottom pb-2 mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-person-badge text-primary"></i> 1. Employee &amp; Payroll Period
+                    </h5>
+
+                    <div class="row g-3">
+                        <!-- Employee Selector -->
+                        <div class="col-md-6">
+                            <label for="inputEmployeeId" class="form-label fw-semibold text-main">
+                                Employee <span class="text-danger">*</span>
+                            </label>
+                            {% if is_edit %}
+                                <div class="form-control bg-body-tertiary d-flex align-items-center justify-content-between" id="displayEmployeeInfo">
+                                    <div class="fw-bold text-main">
+                                        {{ record.first_name }} {{ record.last_name }} 
+                                        <span class="badge bg-secondary-subtle text-secondary ms-1">{{ record.employee_code }}</span>
+                                    </div>
+                                    <span class="text-muted small">{{ record.department }}</span>
+                                </div>
+                                <input type="hidden" name="employee_id" id="inputEmployeeId" value="{{ record.employee_id }}">
+                            {% else %}
+                                <select 
+                                    name="employee_id" 
+                                    id="inputEmployeeId" 
+                                    class="form-select {% if errors.employee_id %}is-invalid{% endif %}" 
+                                    required
+                                    onchange="handleEmployeeChange(this)"
+                                >
+                                    <option value="">-- Select Active Employee --</option>
+                                    {% for emp in active_employees %}
+                                        <option 
+                                            value="{{ emp.id }}" 
+                                            data-hourly-rate="{{ emp.hourly_rate }}" 
+                                            data-dept="{{ emp.department }}"
+                                            {% if form_data.employee_id|string == emp.id|string %}selected{% endif %}
+                                        >
+                                            {{ emp.first_name }} {{ emp.last_name }} ({{ emp.employee_code }}) - {{ emp.department }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if errors.employee_id %}
+                                    <div class="invalid-feedback">{{ errors.employee_id }}</div>
+                                {% else %}
+                                    <div class="form-text text-muted">Only active employees are eligible for attendance entries.</div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+
+                        <!-- Month Selector -->
+                        <div class="col-sm-6 col-md-3">
+                            <label for="inputMonth" class="form-label fw-semibold text-main">
+                                Payroll Month <span class="text-danger">*</span>
+                            </label>
+                            {% if is_edit %}
+                                <div class="form-control bg-body-tertiary fw-semibold">
+                                    {{ month_names[record.month] }}
+                                </div>
+                                <input type="hidden" name="month" id="inputMonth" value="{{ record.month }}">
+                            {% else %}
+                                <select 
+                                    name="month" 
+                                    id="inputMonth" 
+                                    class="form-select {% if errors.month %}is-invalid{% endif %}" 
+                                    required
+                                    onchange="fetchWorkingDaysUpdate()"
+                                >
+                                    {% for m in range(1, 13) %}
+                                        <option value="{{ m }}" {% if form_data.month|int == m %}selected{% endif %}>
+                                            {{ month_names[m] }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if errors.month %}
+                                    <div class="invalid-feedback">{{ errors.month }}</div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+
+                        <!-- Year Selector -->
+                        <div class="col-sm-6 col-md-3">
+                            <label for="inputYear" class="form-label fw-semibold text-main">
+                                Payroll Year <span class="text-danger">*</span>
+                            </label>
+                            {% if is_edit %}
+                                <div class="form-control bg-body-tertiary fw-semibold">
+                                    {{ record.year }}
+                                </div>
+                                <input type="hidden" name="year" id="inputYear" value="{{ record.year }}">
+                            {% else %}
+                                <input 
+                                    type="number" 
+                                    name="year" 
+                                    id="inputYear" 
+                                    class="form-control {% if errors.year %}is-invalid{% endif %}" 
+                                    value="{{ form_data.year }}" 
+                                    min="2000" 
+                                    max="2100" 
+                                    required
+                                    onchange="fetchWorkingDaysUpdate()"
+                                >
+                                {% if errors.year %}
+                                    <div class="invalid-feedback">{{ errors.year }}</div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: Working Days & Weekends Definition -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-main border-bottom pb-2 mb-3 d-flex align-items-center justify-content-between">
+                        <span class="d-flex align-items-center gap-2">
+                            <i class="bi bi-calendar-week text-primary"></i> 2. Working Days &amp; Calendar Config
+                        </span>
+                        <button type="button" class="btn btn-outline-primary btn-xs py-1 px-2" id="btnAutoWorkingDays" onclick="fetchWorkingDaysUpdate()">
+                            <i class="bi bi-magic me-1"></i> Recalculate Weekdays
+                        </button>
+                    </h5>
+
+                    <!-- Explanatory Weekend & Holiday Callout -->
+                    <div class="p-3 bg-body-tertiary rounded-3 border mb-3 d-flex align-items-start gap-3" id="calendarExplainerBox">
+                        <div class="p-2 bg-primary-subtle text-primary rounded-circle mt-1 flex-shrink-0">
+                            <i class="bi bi-info-circle-fill"></i>
+                        </div>
+                        <div class="small">
+                            <strong class="text-main">Weekend &amp; Holiday Working Day Rule:</strong>
+                            <p class="mb-1 text-muted" id="calendarExplanationText">
+                                {{ calendar_info.explanation }}
+                            </p>
+                            <span class="badge bg-secondary-subtle text-secondary me-2" id="badgeCalendarDays">
+                                {{ calendar_info.total_calendar_days }} Total Days
+                            </span>
+                            <span class="badge bg-danger-subtle text-danger me-2" id="badgeWeekendDays">
+                                {{ calendar_info.weekend_days }} Weekend Days (Sat &amp; Sun)
+                            </span>
+                            <span class="badge bg-success-subtle text-success" id="badgeWeekdays">
+                                {{ calendar_info.default_working_days }} Mon-Fri Weekdays
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="inputWorkingDays" class="form-label fw-semibold text-main">
+                                Total Working Days in Month <span class="text-danger">*</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                name="total_working_days" 
+                                id="inputWorkingDays" 
+                                class="form-control {% if errors.total_working_days %}is-invalid{% endif %}" 
+                                value="{{ form_data.total_working_days }}" 
+                                min="1" 
+                                max="31" 
+                                required
+                                oninput="reconcileAttendance()"
+                            >
+                            {% if errors.total_working_days %}
+                                <div class="invalid-feedback">{{ errors.total_working_days }}</div>
+                            {% else %}
+                                <div class="form-text text-muted">Configured business days for this month (excluding weekends).</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="inputPresentDays" class="form-label fw-semibold text-main">
+                                Days Worked (Present Days) <span class="text-danger">*</span>
+                            </label>
+                            <input 
+                                type="number" 
+                                step="0.5" 
+                                min="0" 
+                                max="31" 
+                                name="present_days" 
+                                id="inputPresentDays" 
+                                class="form-control {% if errors.present_days %}is-invalid{% endif %}" 
+                                value="{{ form_data.present_days }}" 
+                                required
+                                oninput="reconcileAttendance()"
+                            >
+                            {% if errors.present_days %}
+                                <div class="invalid-feedback">{{ errors.present_days }}</div>
+                            {% else %}
+                                <div class="form-text text-muted">Number of full and half days physically worked by the employee.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: Leave Accounting (Paid vs. Unpaid Leaves) -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-main border-bottom pb-2 mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-airplane text-primary"></i> 3. Leave Accounting &amp; Salary Deductions
+                    </h5>
+
+                    <div class="row g-3">
+                        <!-- Paid Leaves -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 border bg-body-tertiary h-100">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <label for="inputPaidLeaves" class="form-label fw-semibold text-success mb-0">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Paid Leaves (Days)
+                                    </label>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle fs-xs">No Pay Deduction</span>
+                                </div>
+                                <input 
+                                    type="number" 
+                                    step="0.5" 
+                                    min="0" 
+                                    max="31" 
+                                    name="paid_leaves" 
+                                    id="inputPaidLeaves" 
+                                    class="form-control {% if errors.paid_leaves %}is-invalid{% endif %}" 
+                                    value="{{ form_data.paid_leaves }}" 
+                                    required
+                                    oninput="reconcileAttendance()"
+                                >
+                                {% if errors.paid_leaves %}
+                                    <div class="invalid-feedback">{{ errors.paid_leaves }}</div>
+                                {% else %}
+                                    <div class="form-text text-muted small mt-1">
+                                        Approved annual, sick, or casual leaves. Full basic salary and allowances are preserved.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Unpaid Leaves -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 border bg-body-tertiary h-100">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <label for="inputUnpaidLeaves" class="form-label fw-semibold text-warning mb-0">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Unpaid Leaves (LWP Days)
+                                    </label>
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle fs-xs">Generates Leave Deduction</span>
+                                </div>
+                                <input 
+                                    type="number" 
+                                    step="0.5" 
+                                    min="0" 
+                                    max="31" 
+                                    name="unpaid_leaves" 
+                                    id="inputUnpaidLeaves" 
+                                    class="form-control {% if errors.unpaid_leaves %}is-invalid{% endif %}" 
+                                    value="{{ form_data.unpaid_leaves }}" 
+                                    required
+                                    oninput="reconcileAttendance()"
+                                >
+                                {% if errors.unpaid_leaves %}
+                                    <div class="invalid-feedback">{{ errors.unpaid_leaves }}</div>
+                                {% else %}
+                                    <div class="form-text text-muted small mt-1">
+                                        Leave Without Pay (LWP). Generates configured per-day deductions during payroll generation.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Real-Time Reconciliation Status Card -->
+                    <div class="mt-3 p-3 rounded-3 border" id="reconciliationBox">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div>
+                                <span class="fw-bold text-main small text-uppercase">Reconciliation Summary:</span>
+                                <div class="d-flex align-items-center gap-3 mt-1 small">
+                                    <span>Days Worked: <strong id="summaryDaysWorked">0</strong></span>
+                                    <span>+</span>
+                                    <span>Paid Leaves: <strong id="summaryPaidLeaves" class="text-success">0</strong></span>
+                                    <span>+</span>
+                                    <span>Unpaid Leaves: <strong id="summaryUnpaidLeaves" class="text-warning">0</strong></span>
+                                    <span>=</span>
+                                    <span>Total Accounted: <strong id="summaryTotalAccounted" class="text-primary">0</strong> / <strong id="summaryConfiguredDays">0</strong></span>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <div id="reconciliationBadge" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                                    <i class="bi bi-check2-all me-1"></i> Reconciliation Balanced
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Real-time Warning if Accounted Days exceed Working Days -->
+                        <div class="alert alert-danger mt-3 mb-0 py-2 px-3 d-none" id="excessLeaveAlert">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            <strong>Rule Violation:</strong> The sum of days worked and leaves (<span id="alertAccountedSum"></span>) 
+                            exceeds configured working days (<span id="alertConfiguredDays"></span>). Please adjust inputs.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 4: Overtime Tracking -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-main border-bottom pb-2 mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-lightning-charge text-primary"></i> 4. Overtime Hours &amp; Hourly Rate
+                    </h5>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="inputOvertimeHours" class="form-label fw-semibold text-main">
+                                Overtime Hours
+                            </label>
+                            <div class="input-group">
+                                <input 
+                                    type="number" 
+                                    step="0.25" 
+                                    min="0" 
+                                    max="300" 
+                                    name="overtime_hours" 
+                                    id="inputOvertimeHours" 
+                                    class="form-control {% if errors.overtime_hours %}is-invalid{% endif %}" 
+                                    value="{{ form_data.overtime_hours }}" 
+                                    oninput="reconcileAttendance()"
+                                >
+                                <span class="input-group-text bg-body-tertiary">hours</span>
+                                {% if errors.overtime_hours %}
+                                    <div class="invalid-feedback">{{ errors.overtime_hours }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text text-muted">Reconciled extra hours approved beyond standard shifts.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="inputOvertimeRate" class="form-label fw-semibold text-main">
+                                Overtime Rate Per Hour ($)
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-body-tertiary">$</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01" 
+                                    min="0" 
+                                    name="overtime_rate" 
+                                    id="inputOvertimeRate" 
+                                    class="form-control {% if errors.overtime_rate %}is-invalid{% endif %}" 
+                                    value="{{ form_data.overtime_rate }}" 
+                                    oninput="reconcileAttendance()"
+                                >
+                                <span class="input-group-text bg-body-tertiary">/ hr</span>
+                                {% if errors.overtime_rate %}
+                                    <div class="invalid-feedback">{{ errors.overtime_rate }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-text text-muted">Defaulted from employee's salary profile; can be overridden if special shift multiplier applies.</div>
+                        </div>
+
+                        <!-- Estimated Overtime Pay Preview -->
+                        <div class="col-12">
+                            <div class="p-2 px-3 bg-primary-subtle text-primary border border-primary-subtle rounded-3 small d-flex align-items-center justify-content-between">
+                                <span><i class="bi bi-calculator me-1"></i> Estimated Overtime Pay:</span>
+                                <strong id="otPayPreview">$0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 5: Notes & Remarks -->
+                <div class="mb-4">
+                    <h5 class="fw-bold text-main border-bottom pb-2 mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-chat-left-text text-primary"></i> 5. Notes &amp; Verification Remarks
+                    </h5>
+
+                    <div>
+                        <label for="inputNotes" class="form-label fw-semibold text-main">
+                            Remarks / Shift Notes <span class="text-muted fw-normal small">(Optional, max 255 chars)</span>
+                        </label>
+                        <textarea 
+                            name="notes" 
+                            id="inputNotes" 
+                            rows="2" 
+                            class="form-control {% if errors.notes %}is-invalid{% endif %}" 
+                            maxlength="255" 
+                            placeholder="Add any approvals, half-day specifics, medical certificates, or reasons for overtime..."
+                        >{{ form_data.notes }}</textarea>
+                        {% if errors.notes %}
+                            <div class="invalid-feedback">{{ errors.notes }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Form Actions & Submission -->
+                <div class="d-flex justify-content-end align-items-center gap-3 pt-3 border-top">
+                    <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary px-4 py-2" id="btnCancelForm">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold d-inline-flex align-items-center gap-2" id="btnSubmitAttendance">
+                        <i class="bi bi-check-lg"></i>
+                        {% if is_edit %}Update Attendance Record{% else %}Save Monthly Record{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Client-Side Working Days & Validation Script -->
+<script>
+function handleEmployeeChange(selectElem) {
+    const selectedOption = selectElem.options[selectElem.selectedIndex];
+    if (selectedOption && selectedOption.dataset.hourlyRate) {
+        const rateInput = document.getElementById("inputOvertimeRate");
+        if (rateInput && (!rateInput.value || rateInput.value === "0.00" || rateInput.value === "0")) {
+            rateInput.value = parseFloat(selectedOption.dataset.hourlyRate).toFixed(2);
+            reconcileAttendance();
+        }
+    }
+}
+
+function fetchWorkingDaysUpdate() {
+    const yearElem = document.getElementById("inputYear");
+    const monthElem = document.getElementById("inputMonth");
+    if (!yearElem || !monthElem) return;
+
+    const year = yearElem.value;
+    const month = monthElem.value;
+
+    fetch(`{{ url_for('attendance.api_working_days') }}?year=${year}&month=${month}`)
+        .then(res => res.json())
+        .then(data => {
+            const workingDaysInput = document.getElementById("inputWorkingDays");
+            const presentDaysInput = document.getElementById("inputPresentDays");
+            const explanationElem = document.getElementById("calendarExplanationText");
+            const badgeCal = document.getElementById("badgeCalendarDays");
+            const badgeWe = document.getElementById("badgeWeekendDays");
+            const badgeWd = document.getElementById("badgeWeekdays");
+
+            if (data.default_working_days && workingDaysInput) {
+                workingDaysInput.value = data.default_working_days;
+                if (!presentDaysInput.value || presentDaysInput.value === "0") {
+                    presentDaysInput.value = data.default_working_days;
+                }
+            }
+            if (data.explanation && explanationElem) {
+                explanationElem.innerText = data.explanation;
+            }
+            if (badgeCal) badgeCal.innerText = `${data.total_calendar_days} Total Days`;
+            if (badgeWe) badgeWe.innerText = `${data.weekend_days} Weekend Days (Sat & Sun)`;
+            if (badgeWd) badgeWd.innerText = `${data.default_working_days} Mon-Fri Weekdays`;
+
+            reconcileAttendance();
+        })
+        .catch(err => {
+            console.warn("Working days API fetch notice:", err);
+            reconcileAttendance();
+        });
+}
+
+function reconcileAttendance() {
+    const workingDays = parseFloat(document.getElementById("inputWorkingDays")?.value || 0);
+    const presentDays = parseFloat(document.getElementById("inputPresentDays")?.value || 0);
+    const paidLeaves = parseFloat(document.getElementById("inputPaidLeaves")?.value || 0);
+    const unpaidLeaves = parseFloat(document.getElementById("inputUnpaidLeaves")?.value || 0);
+    const otHours = parseFloat(document.getElementById("inputOvertimeHours")?.value || 0);
+    const otRate = parseFloat(document.getElementById("inputOvertimeRate")?.value || 0);
+
+    const totalAccounted = presentDays + paidLeaves + unpaidLeaves;
+    const excess = totalAccounted > workingDays;
+
+    // Update textual indicators
+    const elWorked = document.getElementById("summaryDaysWorked");
+    const elPaid = document.getElementById("summaryPaidLeaves");
+    const elUnpaid = document.getElementById("summaryUnpaidLeaves");
+    const elAccounted = document.getElementById("summaryTotalAccounted");
+    const elConfig = document.getElementById("summaryConfiguredDays");
+    const badge = document.getElementById("reconciliationBadge");
+    const alertBox = document.getElementById("excessLeaveAlert");
+    const otPreview = document.getElementById("otPayPreview");
+
+    if (elWorked) elWorked.innerText = presentDays;
+    if (elPaid) elPaid.innerText = paidLeaves;
+    if (elUnpaid) elUnpaid.innerText = unpaidLeaves;
+    if (elAccounted) elAccounted.innerText = totalAccounted;
+    if (elConfig) elConfig.innerText = workingDays;
+
+    if (otPreview) {
+        const estOt = (otHours * otRate).toFixed(2);
+        otPreview.innerText = `$${estOt}`;
+    }
+
+    if (excess) {
+        if (alertBox) {
+            alertBox.classList.remove("d-none");
+            document.getElementById("alertAccountedSum").innerText = totalAccounted;
+            document.getElementById("alertConfiguredDays").innerText = workingDays;
+        }
+        if (badge) {
+            badge.className = "badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2";
+            badge.innerHTML = `<i class="bi bi-x-circle me-1"></i> Over Limit (+${(totalAccounted - workingDays).toFixed(1)} days)`;
+        }
+    } else {
+        if (alertBox) alertBox.classList.add("d-none");
+        if (badge) {
+            const diff = workingDays - totalAccounted;
+            if (diff === 0) {
+                badge.className = "badge bg-success-subtle text-success border border-success-subtle px-3 py-2";
+                badge.innerHTML = `<i class="bi bi-check2-all me-1"></i> 100% Reconciled`;
+            } else {
+                badge.className = "badge bg-info-subtle text-info border border-info-subtle px-3 py-2";
+                badge.innerHTML = `<i class="bi bi-info-circle me-1"></i> ${diff.toFixed(1)} Unaccounted Days (Absent)`;
+            }
+        }
+    }
+}
+
+// Initial reconciliation calculation on page load
+document.addEventListener("DOMContentLoaded", function() {
+    reconcileAttendance();
+});
+</script>
+{% endblock %}

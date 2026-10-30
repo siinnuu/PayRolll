@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}{{ employee.first_name }} {{ employee.last_name }} ({{ employee.employee_code }}) | Profile{% endblock %}
+
+{% block header_title %}Employee Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="{{ url_for('employees.index') }}" class="text-decoration-none">Employees</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ employee.first_name }} {{ employee.last_name }}</li>
+            </ol>
+        </nav>
+
+        <!-- Top Profile Banner -->
+        <div class="glass-card p-4 p-md-5 mb-4 position-relative overflow-hidden shadow-sm">
+            <div class="hero-glow" style="top: -40px; right: -40px; width: 200px; height: 200px;"></div>
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-4 bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 64px; height: 64px;">
+                        <i class="bi bi-person-fill fs-2"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-secondary-subtle text-secondary font-mono">{{ employee.employee_code }}</span>
+                            {% if employee.status == 'ACTIVE' %}
+                                <span class="status-pill status-online">
+                                    <span class="status-dot"></span> ACTIVE
+                                </span>
+                            {% else %}
+                                <span class="status-pill status-offline">
+                                    <span class="status-dot"></span> INACTIVE
+                                </span>
+                            {% endif %}
+                        </div>
+                        <h2 class="fw-extrabold text-main mb-0">
+                            {{ employee.first_name }} {{ employee.last_name }}
+                        </h2>
+                        <div class="text-muted small">
+                            <span class="fw-semibold text-primary">{{ employee.designation }}</span> &bull; {{ employee.department }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons Header -->
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ url_for('employees.edit', employee_id=employee.id) }}" class="btn btn-outline-primary btn-sm px-3 py-2 d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-pencil"></i> Edit Profile
+                    </a>
+
+                    {% if employee.status == 'ACTIVE' %}
+                        <button type="button" class="btn btn-outline-warning btn-sm px-3 py-2 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#viewDeactivateModal">
+                            <i class="bi bi-person-slash"></i> Deactivate
+                        </button>
+                    {% else %}
+                        <button type="button" class="btn btn-outline-success btn-sm px-3 py-2 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#viewReactivateModal">
+                            <i class="bi bi-person-check"></i> Reactivate
+                        </button>
+                    {% endif %}
+
+                    <button type="button" class="btn btn-outline-danger btn-sm px-3 py-2 d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#viewDeleteModal">
+                        <i class="bi bi-trash3"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail Cards Grid -->
+        <div class="row g-4 mb-4">
+            <!-- Employment & Organizational Placement -->
+            <div class="col-md-6">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="fw-bold text-main mb-3">
+                        <i class="bi bi-building text-primary me-2"></i> Organizational Placement
+                    </h5>
+                    <ul class="list-group list-group-flush bg-transparent">
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Department</span>
+                            <span class="fw-semibold text-main">{{ employee.department }}</span>
+                        </li>
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Job Title</span>
+                            <span class="fw-semibold text-main">{{ employee.designation }}</span>
+                        </li>
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Joining Date</span>
+                            <span class="font-mono text-main">{{ employee.joining_date }}</span>
+                        </li>
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Status</span>
+                            <span class="badge {% if employee.status == 'ACTIVE' %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                                {{ employee.status }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Contact & System Information -->
+            <div class="col-md-6">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="fw-bold text-main mb-3">
+                        <i class="bi bi-person-lines-fill text-primary me-2"></i> Contact & System Records
+                    </h5>
+                    <ul class="list-group list-group-flush bg-transparent">
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Email Address</span>
+                            <span class="text-main fw-semibold">{{ employee.email }}</span>
+                        </li>
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Phone Number</span>
+                            <span class="text-main">{{ employee.phone or 'Not provided' }}</span>
+                        </li>
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Record Created</span>
+                            <span class="font-mono small text-muted">{{ employee.created_at }}</span>
+                        </li>
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Last Modified</span>
+                            <span class="font-mono small text-muted">{{ employee.updated_at }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Compensation Details -->
+            <div class="col-md-6">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="fw-bold text-main mb-3">
+                        <i class="bi bi-cash-stack text-success me-2"></i> Compensation Structure
+                    </h5>
+                    <ul class="list-group list-group-flush bg-transparent">
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                            <span class="text-muted">Basic Monthly Salary</span>
+                            <span class="fs-5 fw-extrabold text-success font-mono">
+                                ${{ "{:,.2f}".format(employee.base_salary) }}
+                            </span>
+                        </li>
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">House Rent Allowance (HRA)</span>
+                            <span class="font-mono text-main">${{ "{:,.2f}".format(employee.hra or 0.0) }}</span>
+                        </li>
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Transport Allowance</span>
+                            <span class="font-mono text-main">${{ "{:,.2f}".format(employee.transport_allowance or 0.0) }}</span>
+                        </li>
+                        <li class="list-group-item bg-transparent px-0 d-flex justify-content-between border-color">
+                            <span class="text-muted">Medical Allowance</span>
+                            <span class="font-mono text-main">${{ "{:,.2f}".format(employee.medical_allowance or 0.0) }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Historical Audit & Retention Safeguards -->
+            <div class="col-md-6">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="fw-bold text-main mb-3">
+                        <i class="bi bi-shield-lock text-primary me-2"></i> Historical Record Preservation
+                    </h5>
+                    <p class="small text-muted mb-3">
+                        Under ACID accounting standards, historical attendance summaries and payroll disbursements cannot be purged while foreign keys reference this employee.
+                    </p>
+
+                    <div class="p-3 rounded-3 bg-body-tertiary border border-color mb-3 small">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Historical Payroll Runs:</span>
+                            <strong class="font-mono text-primary">{{ history.payroll_count }} records</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Attendance Summaries:</span>
+                            <strong class="font-mono text-primary">{{ history.attendance_count }} records</strong>
+                        </div>
+                    </div>
+
+                    {% if history.has_history %}
+                        <div class="alert alert-info py-2 small mb-0">
+                            <i class="bi bi-info-circle-fill me-1"></i> Hard deletion is restricted because historical payroll records exist. Use <strong>Deactivate</strong> instead.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-secondary py-2 small mb-0">
+                            <i class="bi bi-check2-circle me-1"></i> No past payroll records exist yet for this employee.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('employees.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                <i class="bi bi-arrow-left"></i> Back to Employee Directory
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Deactivation Confirmation Modal -->
+<div class="modal fade" id="viewDeactivateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card">
+            <div class="modal-header border-color">
+                <h5 class="modal-title fw-bold text-warning">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Confirm Employee Deactivation
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-main mb-2">
+                    Are you sure you want to deactivate <strong>{{ employee.first_name }} {{ employee.last_name }}</strong>?
+                </p>
+                <div class="alert alert-info small mb-0">
+                    <i class="bi bi-shield-check me-1"></i> The employee will be excluded from future payroll runs, but all past payroll history will remain <strong>fully preserved</strong>.
+                </div>
+            </div>
+            <div class="modal-footer border-color">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('employees.deactivate', employee_id=employee.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-warning btn-sm">Confirm Deactivate</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reactivation Confirmation Modal -->
+<div class="modal fade" id="viewReactivateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card">
+            <div class="modal-header border-color">
+                <h5 class="modal-title fw-bold text-success">
+                    <i class="bi bi-person-check-fill me-2"></i> Reactivate Employee
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-main mb-0">
+                    Reactivate <strong>{{ employee.first_name }} {{ employee.last_name }}</strong> back to active status?
+                </p>
+            </div>
+            <div class="modal-footer border-color">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('employees.reactivate', employee_id=employee.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success btn-sm">Confirm Reactivate</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Permanent Deletion Modal -->
+<div class="modal fade" id="viewDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card">
+            <div class="modal-header border-color">
+                <h5 class="modal-title fw-bold text-danger">
+                    <i class="bi bi-trash3-fill me-2"></i> Permanent Employee Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if history.has_history %}
+                    <div class="alert alert-danger small mb-0">
+                        <i class="bi bi-x-circle-fill me-1"></i> <strong>Operation Restricted:</strong> This employee has {{ history.payroll_count }} historical payroll statements and {{ history.attendance_count }} attendance records. Database foreign-key constraints (<code>ON DELETE RESTRICT</code>) prevent permanent deletion. Please use <strong>Deactivate</strong> instead.
+                    </div>
+                {% else %}
+                    <p class="text-main mb-2">
+                        Are you sure you want to permanently delete <strong>{{ employee.first_name }} {{ employee.last_name }}</strong>?
+                    </p>
+                    <div class="alert alert-warning small mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i> This action cannot be undone.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer border-color">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                {% if not history.has_history %}
+                <form method="POST" action="{{ url_for('employees.delete', employee_id=employee.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-sm">Permanently Delete</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

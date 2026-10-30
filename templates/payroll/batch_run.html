@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Controlled Batch Payroll Run | PayMaster Pro{% endblock %}
+
+{% block header_title %}Batch Payroll Processing{% endblock %}
+
+{% block content %}
+<!-- Page Header & Action Bar -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('payroll.index') }}" class="text-decoration-none text-muted small hover-primary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Payroll Ledger
+            </a>
+            <span class="text-muted small">&bull; Module 6 Batch Run</span>
+        </div>
+        <h1 class="h2 fw-extrabold text-main mb-0">Controlled Batch Payroll Run</h1>
+        <p class="text-muted small mb-0">
+            Audit monthly attendance and salary structures across all active employees before initiating batch payroll generation.
+        </p>
+    </div>
+
+    <div>
+        <a href="{{ url_for('payroll.generate_individual') }}" class="btn btn-outline-secondary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnSwitchIndividual">
+            <i class="bi bi-person-plus"></i> Single Employee Generator
+        </a>
+    </div>
+</div>
+
+<!-- Period Selection Filter -->
+<div class="glass-card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('payroll.batch_run') }}" class="row g-2 align-items-center" id="periodAuditForm">
+        <div class="col-auto">
+            <span class="fw-bold text-main small">Target Payroll Period:</span>
+        </div>
+
+        <div class="col-sm-4 col-md-3">
+            <select name="month" class="form-select form-select-sm" id="auditMonthSelect" onchange="this.form.submit()">
+                {% for m_num, m_name in month_names.items() %}
+                    <option value="{{ m_num }}" {% if month == m_num %}selected{% endif %}>{{ m_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-sm-4 col-md-3">
+            <select name="year" class="form-select form-select-sm" id="auditYearSelect" onchange="this.form.submit()">
+                {% for yr in available_years %}
+                    <option value="{{ yr }}" {% if year == yr %}selected{% endif %}>{{ yr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-primary btn-sm" id="btnAuditPeriod">
+                <i class="bi bi-arrow-clockwise me-1"></i> Refresh Audit
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Audit Summary Cards -->
+<div class="row g-3 mb-4" id="batchAuditCards">
+    <div class="col-sm-4">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-primary">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-muted small fw-semibold text-uppercase">Active Workforce</span>
+                <i class="bi bi-people-fill text-primary fs-5"></i>
+            </div>
+            <h3 class="fw-bold mb-0 text-main" id="statTotalWorkforce">{{ total_count }}</h3>
+            <span class="text-muted fs-xs">Active staff in organization</span>
+        </div>
+    </div>
+
+    <div class="col-sm-4">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-success">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-muted small fw-semibold text-uppercase">Ready for Run</span>
+                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+            </div>
+            <h3 class="fw-bold mb-0 text-success" id="statEligibleCount">{{ eligible_count }}</h3>
+            <span class="text-muted fs-xs">Attendance &amp; salary verified</span>
+        </div>
+    </div>
+
+    <div class="col-sm-4">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-warning">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-muted small fw-semibold text-uppercase">Ineligible / Pending</span>
+                <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+            </div>
+            <h3 class="fw-bold mb-0 text-warning" id="statIneligibleCount">{{ total_count - eligible_count }}</h3>
+            <span class="text-muted fs-xs">Missing logs or existing payroll</span>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Processing Form & Candidate Table -->
+<form method="POST" action="{{ url_for('payroll.batch_run') }}" id="batchRunForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="year" value="{{ year }}">
+    <input type="hidden" name="month" value="{{ month }}">
+
+    <div class="glass-card shadow-sm overflow-hidden mb-4">
+        <div class="p-3 bg-light border-bottom d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+            <div>
+                <h5 class="fw-bold text-main mb-0">
+                    <i class="bi bi-clipboard-check me-2 text-primary"></i>
+                    Audit Checklist for {{ month_names.get(month, month) }} {{ year }}
+                </h5>
+                <span class="text-muted small">Select employees to include in this automated calculation run.</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleAll" onclick="toggleSelectAll()">
+                    Select / Deselect Eligible
+                </button>
+                <button 
+                    type="submit" 
+                    class="btn btn-primary btn-sm px-4 shadow-sm" 
+                    id="btnExecuteBatch"
+                    {% if eligible_count == 0 %}disabled{% endif %}
+                    onclick="return confirm('Initiate batch payroll calculation for selected employees for {{ month_names.get(month, month) }} {{ year }}?');"
+                >
+                    <i class="bi bi-play-circle-fill me-1"></i> Execute Batch Run
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="batchAuditTable">
+                <thead class="table-light border-bottom">
+                    <tr>
+                        <th scope="col" class="ps-4" style="width: 40px;">
+                            <input type="checkbox" class="form-check-input" id="checkSelectAll" onchange="toggleSelectAll(this.checked)" {% if eligible_count == 0 %}disabled{% endif %}>
+                        </th>
+                        <th scope="col">Employee</th>
+                        <th scope="col" class="text-center">Monthly Attendance</th>
+                        <th scope="col" class="text-center">Salary Structure</th>
+                        <th scope="col" class="text-center">Existing Payroll</th>
+                        <th scope="col" class="text-center">Audit Status</th>
+                        <th scope="col" class="text-end pe-4">Resolution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if audited_employees %}
+                        {% for item in audited_employees %}
+                        {% set emp = item.employee %}
+                        <tr id="row-audit-{{ emp.id }}" class="{% if not item.is_eligible %}table-light opacity-75{% endif %}">
+                            <!-- Select Checkbox -->
+                            <td class="ps-4">
+                                <input 
+                                    type="checkbox" 
+                                    name="selected_employee_ids" 
+                                    value="{{ emp.id }}" 
+                                    class="form-check-input emp-select-checkbox" 
+                                    id="chk-emp-{{ emp.id }}"
+                                    {% if item.is_eligible %}checked{% else %}disabled{% endif %}
+                                >
+                            </td>
+
+                            <!-- Employee Info -->
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar-circle-sm bg-primary-subtle text-primary fw-bold">
+                                        {{ emp.first_name[0] }}{{ emp.last_name[0] }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold text-main">{{ emp.first_name }} {{ emp.last_name }}</div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-secondary-subtle text-secondary fs-xs">{{ emp.employee_code }}</span>
+                                            <span class="text-muted fs-xs">{{ emp.department }} &bull; {{ emp.designation }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Attendance Audit -->
+                            <td class="text-center">
+                                {% if item.has_attendance %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" title="Days Worked: {{ item.attendance.days_worked }}, Paid Leaves: {{ item.attendance.paid_leave_days }}, Unpaid: {{ item.attendance.unpaid_leave_days }}, Overtime: {{ item.attendance.overtime_hours }} hrs">
+                                        <i class="bi bi-check2 me-1"></i> Recorded ({{ item.attendance.days_worked }}d)
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                        <i class="bi bi-x-circle me-1"></i> Missing
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Salary Settings Audit -->
+                            <td class="text-center">
+                                {% if item.has_salary_settings %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" title="Base: {{ item.salary_settings.base_salary|inr }}">
+                                        <i class="bi bi-check2 me-1"></i> {{ item.salary_settings.base_salary|inr }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                        <i class="bi bi-exclamation-circle me-1"></i> Unconfigured
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Existing Payroll Record -->
+                            <td class="text-center">
+                                {% if item.existing_payroll %}
+                                    {% set p_stat = item.existing_payroll.status %}
+                                    <a href="{{ url_for('payroll.view', payroll_id=item.existing_payroll.id) }}" class="badge text-decoration-none {% if p_stat == 'APPROVED' %}bg-primary-subtle text-primary border border-primary-subtle{% elif p_stat == 'PAID' %}bg-success-subtle text-success border border-success-subtle{% elif p_stat == 'CANCELLED' %}bg-secondary-subtle text-secondary border border-secondary-subtle{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}">
+                                        {{ item.existing_payroll.payroll_code }} ({{ p_stat }})
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted fs-xs">None</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Eligibility Indicator -->
+                            <td class="text-center">
+                                {% if item.is_eligible %}
+                                    <span class="badge bg-success text-white px-2 py-1">
+                                        <i class="bi bi-check-lg me-1"></i> Eligible
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                                        Ineligible
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Quick Action / Resolution -->
+                            <td class="text-end pe-4">
+                                {% if not item.has_attendance %}
+                                    <a href="{{ url_for('attendance.add_record') }}" class="btn btn-xs btn-outline-warning" target="_blank">
+                                        <i class="bi bi-plus me-1"></i> Log Attendance
+                                    </a>
+                                {% elif not item.has_salary_settings %}
+                                    <a href="{{ url_for('salary.edit', employee_id=emp.id) }}" class="btn btn-xs btn-outline-info" target="_blank">
+                                        <i class="bi bi-gear me-1"></i> Set Salary
+                                    </a>
+                                {% elif item.existing_payroll %}
+                                    <a href="{{ url_for('payroll.view', payroll_id=item.existing_payroll.id) }}" class="btn btn-xs btn-outline-secondary">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('payroll.generate_individual', employee_id=emp.id, year=year, month=month) }}" class="btn btn-xs btn-outline-primary">
+                                        <i class="bi bi-play me-1"></i> Preview
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                No active employees found in the organization.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+<!-- Workflow Security & Calculation Safeguards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="glass-card p-3 h-100 shadow-sm border-top border-3 border-primary">
+            <h6 class="fw-bold text-main mb-2">
+                <i class="bi bi-shield-check text-primary me-2"></i> Transaction Safety
+            </h6>
+            <p class="text-muted small mb-0">
+                Batch execution runs in isolated database transactions. Failed calculations are skipped safely without blocking eligible records.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="glass-card p-3 h-100 shadow-sm border-top border-3 border-info">
+            <h6 class="fw-bold text-main mb-2">
+                <i class="bi bi-camera-fill text-info me-2"></i> Snapshot Preservation
+            </h6>
+            <p class="text-muted small mb-0">
+                Generated payroll statements freeze compensation and attendance values. Subsequent changes to employee salary settings will never corrupt past payroll records.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="glass-card p-3 h-100 shadow-sm border-top border-3 border-warning">
+            <h6 class="fw-bold text-main mb-2">
+                <i class="bi bi-slash-circle text-warning me-2"></i> Duplicate Prevention
+            </h6>
+            <p class="text-muted small mb-0">
+                Unique constraints strictly prevent multiple payroll statements for the same employee and payroll period.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleSelectAll(checked) {
+    const checkboxes = document.querySelectorAll('.emp-select-checkbox:not(:disabled)');
+    const master = document.getElementById('checkSelectAll');
+    const newState = (typeof checked === 'boolean') ? checked : !master.checked;
+    
+    master.checked = newState;
+    checkboxes.forEach(cb => {
+        cb.checked = newState;
+    });
+}
+</script>
+{% endblock %}

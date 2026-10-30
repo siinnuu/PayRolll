@@ -1,0 +1,1150 @@
+{% extends "base.html" %}
+
+{% block title %}DBMS Academic Documentation - Employee Payroll Management System{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dbms-nav {
+        position: sticky;
+        top: 1rem;
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+    }
+    .dbms-nav .nav-link {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.75rem;
+        color: var(--text-muted);
+        border-left: 2px solid transparent;
+        border-radius: 0;
+        transition: all 0.2s ease;
+    }
+    .dbms-nav .nav-link:hover, .dbms-nav .nav-link.active {
+        color: var(--color-primary);
+        border-left-color: var(--color-primary);
+        background: rgba(99, 102, 241, 0.05);
+    }
+    .sql-box {
+        background: #0d1117;
+        color: #e6edf3;
+        border-radius: 8px;
+        padding: 1rem;
+        font-family: 'JetBrains Mono', Consolas, monospace;
+        font-size: 0.85rem;
+        overflow-x: auto;
+        border: 1px solid #30363d;
+    }
+    .sql-box .kw { color: #ff7b72; font-weight: 600; }
+    .sql-box .fn { color: #d2a8ff; font-weight: 600; }
+    .sql-box .str { color: #a5d6ff; }
+    .sql-box .num { color: #79c0ff; }
+    .sql-box .tbl { color: #7ee787; font-weight: 500; }
+    .sql-box .cm { color: #8b949e; font-style: italic; }
+    .sql-box .op { color: #ff7b72; }
+    
+    .schema-notation {
+        font-family: 'JetBrains Mono', Consolas, monospace;
+        background: rgba(99, 102, 241, 0.08);
+        border-left: 3px solid var(--color-primary);
+        padding: 0.75rem 1rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+    .pk { text-decoration: underline; font-weight: bold; color: #f59e0b; }
+    .fk { font-style: italic; color: #38bdf8; }
+    .mermaid-container {
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 10px;
+        padding: 1.5rem;
+        overflow-x: auto;
+        text-align: center;
+    }
+    .concept-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        background: rgba(99, 102, 241, 0.15);
+        color: #818cf8;
+        border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-3 py-3">
+    <!-- Breadcrumb & Top Bar -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}" class="text-decoration-none">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}" class="text-decoration-none">Financial Reports</a></li>
+                <li class="breadcrumb-item active" aria-current="page">DBMS Academic Documentation</li>
+            </ol>
+        </nav>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+                <i class="bi bi-printer"></i> Print / Save PDF
+            </button>
+            <a href="{{ url_for('reports.index') }}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+                <i class="bi bi-file-earmark-bar-graph"></i> Live Reports Portal
+            </a>
+        </div>
+    </div>
+
+    <!-- Header Banner -->
+    <div class="card bg-card border shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-primary text-white">Academic Deliverable</span>
+                        <span class="badge bg-secondary">MySQL 8.0 / InnoDB</span>
+                        <span class="badge bg-success">Third Normal Form (3NF)</span>
+                    </div>
+                    <h1 class="h3 fw-bold mb-1 brand-gradient">Database Management System (DBMS) Academic Documentation</h1>
+                    <p class="text-muted mb-0">
+                        Formal relational specification, relational schema calculus, normalization decomposition proofs, ACID transactions, and analytical SQL architecture for the Employee Payroll Management System.
+                    </p>
+                </div>
+                <div class="d-flex flex-column align-items-end text-end text-muted small">
+                    <div><strong>Project:</strong> Employee Payroll Management System</div>
+                    <div><strong>RDBMS:</strong> MySQL 8.x Engine (InnoDB)</div>
+                    <div><strong>Standard:</strong> ANSI SQL-92 / ISO/IEC 9075</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid: Sticky Sidebar + Content -->
+    <div class="row g-4">
+        <!-- Sticky Navigation Index -->
+        <div class="col-lg-3 d-none d-lg-block">
+            <div class="card bg-card border shadow-sm dbms-nav p-3">
+                <div class="fw-bold text-uppercase fs-xs text-muted mb-2 px-2">Documentation Sections</div>
+                <nav class="nav flex-column">
+                    <a class="nav-link" href="#overview">1. Project Overview & Objectives</a>
+                    <a class="nav-link" href="#er-diagram">2. Entity-Relationship (ER) Diagram</a>
+                    <a class="nav-link" href="#relational-schema">3. Relational Schema Notation</a>
+                    <a class="nav-link" href="#data-dictionary">4. Table Specifications & Dictionary</a>
+                    <a class="nav-link" href="#cardinality">5. Cardinality & Foreign Keys</a>
+                    <a class="nav-link" href="#normalization">6. Normalization Analysis (1NF-3NF)</a>
+                    <a class="nav-link" href="#crud">7. Parameterized CRUD Operations</a>
+                    <a class="nav-link" href="#joins">8. Multi-Table Analytical JOINs</a>
+                    <a class="nav-link" href="#aggregations">9. Aggregations & GROUP BY</a>
+                    <a class="nav-link" href="#salary-calculation">10. Salary Calculation Model & SQL</a>
+                    <a class="nav-link" href="#acid">11. Transaction Management & ACID</a>
+                    <a class="nav-link" href="#sample-data">12. Sample Dataset & Verification</a>
+                    <a class="nav-link" href="#concepts-index">13. Demonstrated DBMS Concepts Index</a>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Documentation Content -->
+        <div class="col-lg-9">
+            <!-- 1. Project Overview & Objectives -->
+            <section id="overview" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle"></i> 1. Project Overview & Problem Statement
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <h3 class="h6 fw-bold">1.1 Problem Statement</h3>
+                    <p class="text-muted">
+                        In enterprise human resource management, manual and spreadsheet-based payroll calculation introduces critical business risks, including:
+                    </p>
+                    <ul class="text-muted mb-3">
+                        <li><strong>Data Redundancy & Anomalies:</strong> Duplicate employee master records leading to ghost employees and inconsistent demographic information.</li>
+                        <li><strong>Arithmetic Miscalculations:</strong> Manual tracking of daily rates, prorated unpaid leave deductions, and statutory tax/provident fund withholdings.</li>
+                        <li><strong>Duplicate Disbursements:</strong> Inability to prevent duplicate salary slips generated for the same employee in the same fiscal month.</li>
+                        <li><strong>Audit Trail Deficiencies:</strong> Lack of atomic transactional commits and referential integrity, making it possible to delete employee master records whose payroll or payment history remains active.</li>
+                    </ul>
+
+                    <h3 class="h6 fw-bold">1.2 System Objectives</h3>
+                    <p class="text-muted">
+                        This system establishes a hardened, normalized relational DBMS architecture to enforce mathematical rigor, ACID transaction consistency, and enterprise auditability:
+                    </p>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded-3 bg-body-tertiary h-100">
+                                <div class="fw-bold text-primary mb-1"><i class="bi bi-shield-check me-1"></i> Data Integrity</div>
+                                <div class="text-muted small">Foreign key cascades (<code class="text-info">ON DELETE RESTRICT</code>), check constraints, and unique compound keys guarantee zero orphan records.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded-3 bg-body-tertiary h-100">
+                                <div class="fw-bold text-success mb-1"><i class="bi bi-arrow-repeat me-1"></i> Atomic Transactions</div>
+                                <div class="text-muted small">Multi-statement payroll generation runs inside isolated database transactions (<code class="text-info">START TRANSACTION / COMMIT / ROLLBACK</code>).</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded-3 bg-body-tertiary h-100">
+                                <div class="fw-bold text-warning mb-1"><i class="bi bi-layers me-1"></i> 3NF Normalization</div>
+                                <div class="text-muted small">Zero transitive or partial dependencies. Compensation settings, monthly attendance, and payment disbursement are decomposed cleanly.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Entity-Relationship (ER) Diagram -->
+            <section id="er-diagram" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-diagram-3"></i> 2. Entity-Relationship (ER) Diagram
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        The Entity-Relationship model represents the enterprise domain consisting of 6 core relational entities: <code>users</code>, <code>employees</code>, <code>salary_settings</code>, <code>attendance</code>, <code>payroll</code>, and <code>payments</code>.
+                    </p>
+                    
+                    <div class="mermaid-container mb-3">
+                        <div class="mermaid">
+erDiagram
+    USERS {
+        int id PK
+        string username UK
+        string email UK
+        string password_hash
+        enum role
+        boolean is_active
+        timestamp created_at
+    }
+
+    EMPLOYEES {
+        int id PK
+        string employee_code UK
+        string first_name
+        string last_name
+        string email UK
+        string phone
+        string department
+        string designation
+        date joining_date
+        enum status
+        int user_id FK
+    }
+
+    SALARY_SETTINGS {
+        int id PK
+        int employee_id FK,UK
+        decimal base_salary
+        decimal hourly_rate
+        decimal hra
+        decimal transport_allowance
+        decimal medical_allowance
+        decimal other_allowances
+        decimal tax_deduction_rate
+        decimal pf_deduction_rate
+        decimal other_deductions
+        date effective_from
+    }
+
+    ATTENDANCE {
+        int id PK
+        int employee_id FK
+        smallint year
+        tinyint month
+        tinyint total_working_days
+        decimal present_days
+        decimal absent_days
+        decimal paid_leaves
+        decimal unpaid_leaves
+        decimal overtime_hours
+        decimal overtime_rate
+    }
+
+    PAYROLL {
+        int id PK
+        string payroll_code UK
+        int employee_id FK
+        smallint year
+        tinyint month
+        decimal basic_pay
+        decimal allowances_total
+        decimal overtime_pay
+        decimal gross_pay
+        decimal leave_deduction
+        decimal tax_deduction
+        decimal pf_deduction
+        decimal other_deductions
+        decimal total_deductions
+        decimal net_pay
+        enum status
+        date generated_date
+    }
+
+    PAYMENTS {
+        int id PK
+        int payroll_id FK
+        string payment_reference UK
+        enum payment_method
+        decimal amount_paid
+        date payment_date
+        enum status
+    }
+
+    USERS ||--o| EMPLOYEES : "provisions (user_id)"
+    EMPLOYEES ||--|| SALARY_SETTINGS : "configured by (employee_id)"
+    EMPLOYEES ||--o{ ATTENDANCE : "submits monthly (employee_id)"
+    EMPLOYEES ||--o{ PAYROLL : "receives monthly (employee_id)"
+    PAYROLL ||--o{ PAYMENTS : "settled via (payroll_id)"
+                        </div>
+                    </div>
+                    <div class="text-muted small fst-italic">
+                        * Note: Mermaid ER diagram renders live via client-side SVG generation matching exact MySQL table keys and cardinalities.
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Relational Schema Notation -->
+            <section id="relational-schema" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-code-slash"></i> 3. Relational Schema Notation (Boyce-Codd / Relational Algebra)
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Standard relational database formal notation with <span class="pk">Primary Keys underlined</span> and <span class="fk">Foreign Keys italicized</span>:
+                    </p>
+
+                    <div class="d-flex flex-column gap-3">
+                        <div class="schema-notation">
+                            <strong>USERS</strong> (
+                            <span class="pk">id</span>, 
+                            username [UQ], email [UQ], password_hash, role, is_active, created_at, updated_at
+                            )
+                        </div>
+
+                        <div class="schema-notation">
+                            <strong>EMPLOYEES</strong> (
+                            <span class="pk">id</span>, 
+                            employee_code [UQ], first_name, last_name, email [UQ], phone, department, designation, joining_date, status, 
+                            <span class="fk">user_id</span> [FK &rarr; USERS.id, UQ, NULLABLE]
+                            )
+                        </div>
+
+                        <div class="schema-notation">
+                            <strong>SALARY_SETTINGS</strong> (
+                            <span class="pk">id</span>, 
+                            <span class="fk">employee_id</span> [FK &rarr; EMPLOYEES.id, UQ], 
+                            base_salary, hourly_rate, hra, transport_allowance, medical_allowance, other_allowances, 
+                            tax_deduction_rate, pf_deduction_rate, other_deductions, effective_from, created_at, updated_at
+                            )
+                        </div>
+
+                        <div class="schema-notation">
+                            <strong>ATTENDANCE</strong> (
+                            <span class="pk">id</span>, 
+                            <span class="fk">employee_id</span> [FK &rarr; EMPLOYEES.id], 
+                            year, month, total_working_days, present_days, absent_days, paid_leaves, unpaid_leaves, overtime_hours, overtime_rate, notes, created_at, updated_at,
+                            <span class="text-warning">[UQ: (employee_id, year, month)]</span>
+                            )
+                        </div>
+
+                        <div class="schema-notation">
+                            <strong>PAYROLL</strong> (
+                            <span class="pk">id</span>, 
+                            payroll_code [UQ], 
+                            <span class="fk">employee_id</span> [FK &rarr; EMPLOYEES.id], 
+                            year, month, basic_pay, allowances_total, overtime_pay, gross_pay, leave_deduction, tax_deduction, pf_deduction, other_deductions, total_deductions, net_pay, status, generated_date, payment_due_date, remarks, created_at, updated_at,
+                            <span class="text-warning">[UQ: (employee_id, year, month)]</span>
+                            )
+                        </div>
+
+                        <div class="schema-notation">
+                            <strong>PAYMENTS</strong> (
+                            <span class="pk">id</span>, 
+                            <span class="fk">payroll_id</span> [FK &rarr; PAYROLL.id], 
+                            payment_reference [UQ], payment_method, amount_paid, payment_date, status, transaction_notes, created_at, updated_at
+                            )
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Table Specifications & Data Dictionary -->
+            <section id="data-dictionary" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-table"></i> 4. Table Specifications & Data Dictionary
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="accordionDictionary">
+                        <!-- Table 1: employees -->
+                        <div class="accordion-item bg-transparent border">
+                            <h2 class="accordion-header" id="headingEmp">
+                                <button class="accordion-button bg-transparent fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEmp">
+                                    Table: <code>employees</code> &mdash; Organizational Profiles
+                                </button>
+                            </h2>
+                            <div id="collapseEmp" class="accordion-collapse collapse show" data-bs-parent="#accordionDictionary">
+                                <div class="accordion-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0 font-mono small">
+                                            <thead class="table-dark">
+                                                <tr><th>Column</th><th>Data Type</th><th>Null</th><th>Key</th><th>Default</th><th>Description & Business Constraints</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>id</td><td>INT UNSIGNED</td><td>NO</td><td>PRI</td><td>AUTO_INCREMENT</td><td>Surrogate primary key</td></tr>
+                                                <tr><td>employee_code</td><td>VARCHAR(20)</td><td>NO</td><td>UNI</td><td>None</td><td>Unique employee ID (e.g. EMP001)</td></tr>
+                                                <tr><td>first_name</td><td>VARCHAR(50)</td><td>NO</td><td></td><td>None</td><td>Legal given name</td></tr>
+                                                <tr><td>last_name</td><td>VARCHAR(50)</td><td>NO</td><td></td><td>None</td><td>Legal surname</td></tr>
+                                                <tr><td>email</td><td>VARCHAR(100)</td><td>NO</td><td>UNI</td><td>None</td><td>Corporate email contact</td></tr>
+                                                <tr><td>phone</td><td>VARCHAR(20)</td><td>YES</td><td></td><td>NULL</td><td>Direct contact phone number</td></tr>
+                                                <tr><td>department</td><td>VARCHAR(50)</td><td>NO</td><td>MUL</td><td>None</td><td>Department assignment</td></tr>
+                                                <tr><td>designation</td><td>VARCHAR(50)</td><td>NO</td><td></td><td>None</td><td>Job title / hierarchical rank</td></tr>
+                                                <tr><td>joining_date</td><td>DATE</td><td>NO</td><td></td><td>None</td><td>Official hiring date</td></tr>
+                                                <tr><td>status</td><td>ENUM(...)</td><td>NO</td><td>MUL</td><td>'ACTIVE'</td><td>'ACTIVE', 'INACTIVE', 'TERMINATED', 'ON_LEAVE'</td></tr>
+                                                <tr><td>user_id</td><td>INT UNSIGNED</td><td>YES</td><td>UNI</td><td>NULL</td><td>FK &rarr; users.id (ON DELETE SET NULL)</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table 2: salary_settings -->
+                        <div class="accordion-item bg-transparent border">
+                            <h2 class="accordion-header" id="headingSal">
+                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSal">
+                                    Table: <code>salary_settings</code> &mdash; Compensation Master
+                                </button>
+                            </h2>
+                            <div id="collapseSal" class="accordion-collapse collapse" data-bs-parent="#accordionDictionary">
+                                <div class="accordion-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0 font-mono small">
+                                            <thead class="table-dark">
+                                                <tr><th>Column</th><th>Data Type</th><th>Null</th><th>Key</th><th>Default</th><th>Description</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>id</td><td>INT UNSIGNED</td><td>NO</td><td>PRI</td><td>AUTO_INCREMENT</td><td>Surrogate primary key</td></tr>
+                                                <tr><td>employee_id</td><td>INT UNSIGNED</td><td>NO</td><td>UNI</td><td>None</td><td>FK &rarr; employees.id (1-to-1)</td></tr>
+                                                <tr><td>base_salary</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>Fixed monthly basic compensation</td></tr>
+                                                <tr><td>hourly_rate</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>Overtime hourly billing rate</td></tr>
+                                                <tr><td>hra</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>House Rent Allowance</td></tr>
+                                                <tr><td>transport_allowance</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>Commute allowance</td></tr>
+                                                <tr><td>medical_allowance</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>Healthcare allowance</td></tr>
+                                                <tr><td>tax_deduction_rate</td><td>DECIMAL(5,2)</td><td>NO</td><td></td><td>0.00</td><td>Percentage income tax withholding rate</td></tr>
+                                                <tr><td>pf_deduction_rate</td><td>DECIMAL(5,2)</td><td>NO</td><td></td><td>0.00</td><td>Provident fund statutory rate</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table 3: attendance -->
+                        <div class="accordion-item bg-transparent border">
+                            <h2 class="accordion-header" id="headingAtt">
+                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAtt">
+                                    Table: <code>attendance</code> &mdash; Monthly Time & Leave Tracking
+                                </button>
+                            </h2>
+                            <div id="collapseAtt" class="accordion-collapse collapse" data-bs-parent="#accordionDictionary">
+                                <div class="accordion-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0 font-mono small">
+                                            <thead class="table-dark">
+                                                <tr><th>Column</th><th>Data Type</th><th>Null</th><th>Key</th><th>Default</th><th>Description</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>id</td><td>INT UNSIGNED</td><td>NO</td><td>PRI</td><td>AUTO_INCREMENT</td><td>Surrogate primary key</td></tr>
+                                                <tr><td>employee_id</td><td>INT UNSIGNED</td><td>NO</td><td>MUL</td><td>None</td><td>FK &rarr; employees.id</td></tr>
+                                                <tr><td>year</td><td>SMALLINT UNSIGNED</td><td>NO</td><td>MUL</td><td>None</td><td>Fiscal calendar year</td></tr>
+                                                <tr><td>month</td><td>TINYINT UNSIGNED</td><td>NO</td><td></td><td>None</td><td>CHECK (month BETWEEN 1 AND 12)</td></tr>
+                                                <tr><td>total_working_days</td><td>TINYINT UNSIGNED</td><td>NO</td><td></td><td>30</td><td>Working days in month</td></tr>
+                                                <tr><td>present_days</td><td>DECIMAL(4,1)</td><td>NO</td><td></td><td>0.0</td><td>Actual days logged</td></tr>
+                                                <tr><td>paid_leaves</td><td>DECIMAL(4,1)</td><td>NO</td><td></td><td>0.0</td><td>Authorized paid leave</td></tr>
+                                                <tr><td>unpaid_leaves</td><td>DECIMAL(4,1)</td><td>NO</td><td></td><td>0.0</td><td>Deductible leave days (LWP)</td></tr>
+                                                <tr><td>overtime_hours</td><td>DECIMAL(5,2)</td><td>NO</td><td></td><td>0.00</td><td>Approved overtime hours</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table 4: payroll -->
+                        <div class="accordion-item bg-transparent border">
+                            <h2 class="accordion-header" id="headingPay">
+                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePay">
+                                    Table: <code>payroll</code> &mdash; Monthly Compensation Register
+                                </button>
+                            </h2>
+                            <div id="collapsePay" class="accordion-collapse collapse" data-bs-parent="#accordionDictionary">
+                                <div class="accordion-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0 font-mono small">
+                                            <thead class="table-dark">
+                                                <tr><th>Column</th><th>Data Type</th><th>Null</th><th>Key</th><th>Default</th><th>Description</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>id</td><td>INT UNSIGNED</td><td>NO</td><td>PRI</td><td>AUTO_INCREMENT</td><td>Surrogate primary key</td></tr>
+                                                <tr><td>payroll_code</td><td>VARCHAR(40)</td><td>NO</td><td>UNI</td><td>None</td><td>Unique reference (e.g. PAY-2026-10-EMP001)</td></tr>
+                                                <tr><td>employee_id</td><td>INT UNSIGNED</td><td>NO</td><td>MUL</td><td>None</td><td>FK &rarr; employees.id</td></tr>
+                                                <tr><td>year</td><td>SMALLINT UNSIGNED</td><td>NO</td><td>MUL</td><td>None</td><td>Payroll calendar year</td></tr>
+                                                <tr><td>month</td><td>TINYINT UNSIGNED</td><td>NO</td><td></td><td>None</td><td>CHECK (month BETWEEN 1 AND 12)</td></tr>
+                                                <tr><td>basic_pay</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>Base salary snapshot</td></tr>
+                                                <tr><td>allowances_total</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>Sum of HRA, Transport, Medical, Other</td></tr>
+                                                <tr><td>overtime_pay</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>Overtime hours &times; Overtime rate</td></tr>
+                                                <tr><td>gross_pay</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>basic_pay + allowances + overtime_pay</td></tr>
+                                                <tr><td>leave_deduction</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>Daily rate &times; unpaid leaves</td></tr>
+                                                <tr><td>total_deductions</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>leave_ded + tax + pf + other_ded</td></tr>
+                                                <tr><td>net_pay</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>0.00</td><td>gross_pay - total_deductions</td></tr>
+                                                <tr><td>status</td><td>ENUM(...)</td><td>NO</td><td>MUL</td><td>'DRAFT'</td><td>'DRAFT', 'GENERATED', 'APPROVED', 'PAID', 'CANCELLED'</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table 5: payments -->
+                        <div class="accordion-item bg-transparent border">
+                            <h2 class="accordion-header" id="headingPmt">
+                                <button class="accordion-button collapsed bg-transparent fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePmt">
+                                    Table: <code>payments</code> &mdash; Disbursement Vouchers
+                                </button>
+                            </h2>
+                            <div id="collapsePmt" class="accordion-collapse collapse" data-bs-parent="#accordionDictionary">
+                                <div class="accordion-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0 font-mono small">
+                                            <thead class="table-dark">
+                                                <tr><th>Column</th><th>Data Type</th><th>Null</th><th>Key</th><th>Default</th><th>Description</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>id</td><td>INT UNSIGNED</td><td>NO</td><td>PRI</td><td>AUTO_INCREMENT</td><td>Surrogate primary key</td></tr>
+                                                <tr><td>payroll_id</td><td>INT UNSIGNED</td><td>NO</td><td>MUL</td><td>None</td><td>FK &rarr; payroll.id (ON DELETE RESTRICT)</td></tr>
+                                                <tr><td>payment_reference</td><td>VARCHAR(60)</td><td>NO</td><td>UNI</td><td>None</td><td>Unique transaction ID (e.g. TXN-202610-001)</td></tr>
+                                                <tr><td>payment_method</td><td>ENUM(...)</td><td>NO</td><td></td><td>'BANK_TRANSFER'</td><td>'BANK_TRANSFER', 'CASH', 'CHEQUE', 'UPI', 'DIRECT_DEPOSIT'</td></tr>
+                                                <tr><td>amount_paid</td><td>DECIMAL(12,2)</td><td>NO</td><td></td><td>None</td><td>Disbursed voucher amount</td></tr>
+                                                <tr><td>payment_date</td><td>DATE</td><td>NO</td><td>MUL</td><td>None</td><td>Date settlement recorded</td></tr>
+                                                <tr><td>status</td><td>ENUM(...)</td><td>NO</td><td>MUL</td><td>'SUCCESSFUL'</td><td>'PENDING', 'SUCCESSFUL', 'FAILED', 'REVERSED'</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Relationships & Referential Integrity -->
+            <section id="cardinality" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-link-45deg"></i> 5. Entity Relationships & Referential Integrity
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive mb-4">
+                        <table class="table table-hover table-bordered align-middle small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Parent Entity</th>
+                                    <th>Child Entity</th>
+                                    <th>Cardinality</th>
+                                    <th>Foreign Key</th>
+                                    <th>ON DELETE Action</th>
+                                    <th>ON UPDATE Action</th>
+                                    <th>Business Rationale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>employees</code></td>
+                                    <td><code>salary_settings</code></td>
+                                    <td><span class="badge bg-info">1 : 1</span></td>
+                                    <td><code>employee_id</code></td>
+                                    <td><code>RESTRICT</code></td>
+                                    <td><code>CASCADE</code></td>
+                                    <td>Enforced by <code>UNIQUE(employee_id)</code>. Each employee has exactly one active pay structure. Cannot delete an employee if salary settings exist.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>employees</code></td>
+                                    <td><code>attendance</code></td>
+                                    <td><span class="badge bg-primary">1 : N</span></td>
+                                    <td><code>employee_id</code></td>
+                                    <td><code>RESTRICT</code></td>
+                                    <td><code>CASCADE</code></td>
+                                    <td>One employee logs multiple monthly summaries over time. Restricted to prevent deletion of employees with attendance records.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>employees</code></td>
+                                    <td><code>payroll</code></td>
+                                    <td><span class="badge bg-primary">1 : N</span></td>
+                                    <td><code>employee_id</code></td>
+                                    <td><code>RESTRICT</code></td>
+                                    <td><code>CASCADE</code></td>
+                                    <td>Composite constraint <code>UNIQUE(employee_id, year, month)</code> enforces at most 1 payroll per month per employee. Restricts master employee deletion.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>payroll</code></td>
+                                    <td><code>payments</code></td>
+                                    <td><span class="badge bg-primary">1 : N</span></td>
+                                    <td><code>payroll_id</code></td>
+                                    <td><code>RESTRICT</code></td>
+                                    <td><code>CASCADE</code></td>
+                                    <td>A payroll statement can receive payment disbursements. Cannot delete payroll statements once payments have been issued.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>users</code></td>
+                                    <td><code>employees</code></td>
+                                    <td><span class="badge bg-secondary">0/1 : 1</span></td>
+                                    <td><code>user_id</code></td>
+                                    <td><code>SET NULL</code></td>
+                                    <td><code>CASCADE</code></td>
+                                    <td>De-provisioning a system login user retains the employee profile while nullifying credentials.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-info py-2 d-flex align-items-center gap-2">
+                        <i class="bi bi-shield-lock-fill fs-5"></i>
+                        <div>
+                            <strong>Why <code>ON DELETE RESTRICT</code> matters in Payroll:</strong> 
+                            Under financial regulations (SOX, statutory tax laws), payroll ledgers and disbursement receipts must never be deleted cascade-style. Deleting an employee master record is rejected if historical payroll, attendance, or payment records exist.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Normalization Analysis (1NF-3NF) -->
+            <section id="normalization" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-stack"></i> 6. Normalization Analysis & Decomposition Proofs
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Database normalization minimizes data redundancy and avoids insertion, update, and deletion anomalies. The schema is rigorously proved up to <strong>Third Normal Form (3NF)</strong>.
+                    </p>
+
+                    <!-- 1NF -->
+                    <div class="card bg-body-tertiary border mb-3">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge bg-primary">First Normal Form (1NF)</span>
+                                <span class="fw-bold">Atomic Attributes & Primary Key Existence</span>
+                            </div>
+                            <ul class="text-muted small mb-0">
+                                <li><strong>Condition:</strong> Every attribute contains only atomic (indivisible) values, and each record has a unique identifier without repeating groups or arrays.</li>
+                                <li><strong>Verification in Schema:</strong> 
+                                    <ul>
+                                        <li>Employee names are decomposed into separate atomic columns: <code>first_name</code> and <code>last_name</code>.</li>
+                                        <li>Allowances are structured as explicit numeric columns (<code>hra</code>, <code>transport_allowance</code>, <code>medical_allowance</code>) rather than comma-separated strings or JSON arrays.</li>
+                                        <li>Every table defines an explicit integer surrogate primary key with <code>AUTO_INCREMENT</code>.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 2NF -->
+                    <div class="card bg-body-tertiary border mb-3">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge bg-success">Second Normal Form (2NF)</span>
+                                <span class="fw-bold">Removal of Partial Functional Dependencies</span>
+                            </div>
+                            <ul class="text-muted small mb-0">
+                                <li><strong>Condition:</strong> The relation is in 1NF and every non-prime attribute is fully functionally dependent on every candidate key (no partial key dependencies).</li>
+                                <li><strong>Verification in Schema:</strong>
+                                    <ul>
+                                        <li>In <code>attendance</code>, the candidate business key is <code>(employee_id, year, month)</code>. Non-prime attributes such as <code>present_days</code>, <code>paid_leaves</code>, and <code>unpaid_leaves</code> depend strictly on the complete composite tuple &mdash; they do not depend solely on <code>employee_id</code> or solely on <code>(year, month)</code>.</li>
+                                        <li>Employee demographic attributes (e.g. <code>department</code>, <code>designation</code>) are NOT duplicated in <code>attendance</code> or <code>payroll</code>. Storing department in <code>payroll</code> would cause a partial dependency on <code>employee_id</code>. Instead, foreign keys are linked.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 3NF -->
+                    <div class="card bg-body-tertiary border">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge bg-warning text-dark">Third Normal Form (3NF)</span>
+                                <span class="fw-bold">Elimination of Transitive Dependencies</span>
+                            </div>
+                            <ul class="text-muted small mb-0">
+                                <li><strong>Condition:</strong> The relation is in 2NF and no non-prime attribute is transitively dependent on the primary key ($X \rightarrow Y$ where $Y \rightarrow Z$).</li>
+                                <li><strong>Verification & Snapshots:</strong>
+                                    <ul>
+                                        <li>In <code>employees</code>, designations and departments do not determine compensation rates directly. Compensation rules are isolated in <code>salary_settings</code>.</li>
+                                        <li><strong>Financial Historical Snapshot Rationale:</strong> In <code>payroll</code>, storing <code>basic_pay</code>, <code>allowances_total</code>, and <code>net_pay</code> might seem like stored derived values. In relational theory and accounting compliance, this is <em>temporal snapshotting</em>, NOT a transitive dependency. If an employee's salary changes in November, the historical October payroll statement must remain immutably fixed at October's pay rate, proving true 3NF temporal stability.</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. Parameterized CRUD Operations -->
+            <section id="crud" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-terminal"></i> 7. Parameterized CRUD Operations (SQL Examples)
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        All application database queries strictly employ <strong>parameterized queries</strong> (<code>%s</code> placeholders via <code>mysql.connector</code>) to eliminate SQL Injection (CWE-89) vulnerabilities.
+                    </p>
+
+                    <!-- SELECT -->
+                    <div class="mb-3">
+                        <div class="fw-bold fs-sm text-info mb-1"><i class="bi bi-search me-1"></i> SELECT: Retrieve Detailed Payroll Record with Employee Details</div>
+                        <div class="sql-box">
+<span class="kw">SELECT</span> 
+    p.id, p.payroll_code, p.year, p.month, p.gross_pay, p.total_deductions, p.net_pay, p.status,
+    e.employee_code, CONCAT(e.first_name, <span class="str">' '</span>, e.last_name) <span class="kw">AS</span> employee_name,
+    e.department, e.designation,
+    s.base_salary, s.hra, s.transport_allowance, s.medical_allowance
+<span class="kw">FROM</span> <span class="tbl">payroll</span> p
+<span class="kw">INNER JOIN</span> <span class="tbl">employees</span> e <span class="kw">ON</span> p.employee_id <span class="op">=</span> e.id
+<span class="kw">LEFT JOIN</span> <span class="tbl">salary_settings</span> s <span class="kw">ON</span> e.id <span class="op">=</span> s.employee_id
+<span class="kw">WHERE</span> p.id <span class="op">=</span> %s;
+                        </div>
+                    </div>
+
+                    <!-- INSERT -->
+                    <div class="mb-3">
+                        <div class="fw-bold fs-sm text-success mb-1"><i class="bi bi-plus-circle me-1"></i> INSERT: Create Monthly Attendance Record</div>
+                        <div class="sql-box">
+<span class="kw">INSERT INTO</span> <span class="tbl">attendance</span> (
+    employee_id, year, month, total_working_days, present_days, 
+    absent_days, paid_leaves, unpaid_leaves, overtime_hours, overtime_rate, notes
+) <span class="kw">VALUES</span> (
+    %s, %s, %s, %s, %s, 
+    %s, %s, %s, %s, %s, %s
+);
+                        </div>
+                    </div>
+
+                    <!-- UPDATE -->
+                    <div class="mb-3">
+                        <div class="fw-bold fs-sm text-warning mb-1"><i class="bi bi-pencil-square me-1"></i> UPDATE: Transition Payroll Status with Optimistic Concurrency Check</div>
+                        <div class="sql-box">
+<span class="kw">UPDATE</span> <span class="tbl">payroll</span> 
+<span class="kw">SET</span> status <span class="op">=</span> %s, remarks <span class="op">=</span> %s, updated_at <span class="op">=</span> <span class="fn">NOW</span>()
+<span class="kw">WHERE</span> id <span class="op">=</span> %s <span class="kw">AND</span> status <span class="op">=</span> %s;
+                        </div>
+                    </div>
+
+                    <!-- DELETE -->
+                    <div>
+                        <div class="fw-bold fs-sm text-danger mb-1"><i class="bi bi-trash me-1"></i> DELETE / CANCELLATION: Controlled Deletion with Referential Protection</div>
+                        <div class="sql-box">
+<span class="cm">-- Soft delete / status cancellation preserves audit trail:</span>
+<span class="kw">UPDATE</span> <span class="tbl">employees</span> 
+<span class="kw">SET</span> status <span class="op">=</span> <span class="str">'TERMINATED'</span>, updated_at <span class="op">=</span> <span class="fn">NOW</span>() 
+<span class="kw">WHERE</span> id <span class="op">=</span> %s;
+
+<span class="cm">-- Physical delete of draft payroll statement (guaranteed 0 payments by foreign key):</span>
+<span class="kw">DELETE FROM</span> <span class="tbl">payroll</span> 
+<span class="kw">WHERE</span> id <span class="op">=</span> %s <span class="kw">AND</span> status <span class="op">=</span> <span class="str">'DRAFT'</span>;
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. Multi-Table Analytical JOINs -->
+            <section id="joins" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-intersect"></i> 8. Multi-Table Analytical JOIN Queries
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Demonstrations of complex inner, left outer, and aggregation joins linking 4+ tables simultaneously:
+                    </p>
+
+                    <!-- Query 1 -->
+                    <div class="mb-4">
+                        <h3 class="h6 fw-bold">8.1 Comprehensive Payroll Ledger with Outstanding Payment Reconciliation</h3>
+                        <p class="text-muted small">
+                            Joins <code>payroll</code>, <code>employees</code>, and <code>payments</code> to compute disbursed vs. pending balances per payroll line:
+                        </p>
+                        <div class="sql-box">
+<span class="kw">SELECT</span> 
+    p.id <span class="kw">AS</span> payroll_id,
+    p.payroll_code,
+    CONCAT(e.first_name, <span class="str">' '</span>, e.last_name) <span class="kw">AS</span> employee_name,
+    e.employee_code,
+    e.department,
+    p.net_pay,
+    <span class="fn">COALESCE</span>(<span class="fn">SUM</span>(pm.amount_paid), <span class="num">0.00</span>) <span class="kw">AS</span> total_disbursed,
+    (p.net_pay <span class="op">-</span> <span class="fn">COALESCE</span>(<span class="fn">SUM</span>(pm.amount_paid), <span class="num">0.00</span>)) <span class="kw">AS</span> outstanding_balance,
+    p.status <span class="kw">AS</span> payroll_status
+<span class="kw">FROM</span> <span class="tbl">payroll</span> p
+<span class="kw">INNER JOIN</span> <span class="tbl">employees</span> e <span class="kw">ON</span> p.employee_id <span class="op">=</span> e.id
+<span class="kw">LEFT JOIN</span> <span class="tbl">payments</span> pm <span class="kw">ON</span> p.id <span class="op">=</span> pm.payroll_id <span class="kw">AND</span> pm.status <span class="op">=</span> <span class="str">'SUCCESSFUL'</span>
+<span class="kw">WHERE</span> p.year <span class="op">=</span> %s <span class="kw">AND</span> p.month <span class="op">=</span> %s
+<span class="kw">GROUP BY</span> p.id, p.payroll_code, e.first_name, e.last_name, e.employee_code, e.department, p.net_pay, p.status
+<span class="kw">ORDER BY</span> e.department <span class="kw">ASC</span>, e.last_name <span class="kw">ASC</span>;
+                        </div>
+                    </div>
+
+                    <!-- Query 2 -->
+                    <div>
+                        <h3 class="h6 fw-bold">8.2 Attendance-to-Payroll Verification Cross-Check Join</h3>
+                        <p class="text-muted small">
+                            Validates that recorded payroll leave deductions exactly reflect unpaid leaves from attendance records:
+                        </p>
+                        <div class="sql-box">
+<span class="kw">SELECT</span> 
+    e.employee_code,
+    CONCAT(e.first_name, <span class="str">' '</span>, e.last_name) <span class="kw">AS</span> employee_name,
+    a.total_working_days,
+    a.present_days,
+    a.unpaid_leaves,
+    p.basic_pay,
+    <span class="fn">ROUND</span>((p.basic_pay <span class="op">/</span> a.total_working_days) <span class="op">*</span> a.unpaid_leaves, <span class="num">2</span>) <span class="kw">AS</span> expected_leave_deduction,
+    p.leave_deduction <span class="kw">AS</span> recorded_leave_deduction,
+    <span class="kw">CASE</span> 
+        <span class="kw">WHEN</span> <span class="fn">ROUND</span>((p.basic_pay <span class="op">/</span> a.total_working_days) <span class="op">*</span> a.unpaid_leaves, <span class="num">2</span>) <span class="op">=</span> p.leave_deduction <span class="kw">THEN</span> <span class="str">'RECONCILED'</span>
+        <span class="kw">ELSE</span> <span class="str">'VARIANCE_DETECTED'</span>
+    <span class="kw">END</span> <span class="kw">AS</span> audit_status
+<span class="kw">FROM</span> <span class="tbl">payroll</span> p
+<span class="kw">INNER JOIN</span> <span class="tbl">employees</span> e <span class="kw">ON</span> p.employee_id <span class="op">=</span> e.id
+<span class="kw">INNER JOIN</span> <span class="tbl">attendance</span> a <span class="kw">ON</span> p.employee_id <span class="op">=</span> a.employee_id <span class="kw">AND</span> p.year <span class="op">=</span> a.year <span class="kw">AND</span> p.month <span class="op">=</span> a.month
+<span class="kw">WHERE</span> p.year <span class="op">=</span> %s <span class="kw">AND</span> p.month <span class="op">=</span> %s;
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. Aggregations, GROUP BY & Analytical Logic -->
+            <section id="aggregations" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-calculator-fill"></i> 9. Aggregations, GROUP BY & Conditional Metrics
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Demonstrating <code>SUM()</code>, <code>AVG()</code>, <code>COUNT()</code>, <code>MIN()</code>, <code>MAX()</code>, <code>COALESCE()</code>, and <code>CASE WHEN</code> conditional aggregation.
+                    </p>
+
+                    <!-- Department Analytics -->
+                    <div class="mb-4">
+                        <h3 class="h6 fw-bold">9.1 Department-Level Workforce & Salary Commitment Aggregation</h3>
+                        <div class="sql-box">
+<span class="kw">SELECT</span> 
+    e.department,
+    <span class="fn">COUNT</span>(e.id) <span class="kw">AS</span> total_employees,
+    <span class="fn">COUNT</span>(<span class="kw">CASE WHEN</span> e.status <span class="op">=</span> <span class="str">'ACTIVE'</span> <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">END</span>) <span class="kw">AS</span> active_employees,
+    <span class="fn">COALESCE</span>(<span class="fn">SUM</span>(s.base_salary), <span class="num">0.00</span>) <span class="kw">AS</span> total_base_payroll,
+    <span class="fn">COALESCE</span>(<span class="fn">AVG</span>(s.base_salary), <span class="num">0.00</span>) <span class="kw">AS</span> avg_base_salary,
+    <span class="fn">COALESCE</span>(<span class="fn">MIN</span>(s.base_salary), <span class="num">0.00</span>) <span class="kw">AS</span> min_base_salary,
+    <span class="fn">COALESCE</span>(<span class="fn">MAX</span>(s.base_salary), <span class="num">0.00</span>) <span class="kw">AS</span> max_base_salary
+<span class="kw">FROM</span> <span class="tbl">employees</span> e
+<span class="kw">LEFT JOIN</span> <span class="tbl">salary_settings</span> s <span class="kw">ON</span> e.id <span class="op">=</span> s.employee_id
+<span class="kw">GROUP BY</span> e.department
+<span class="kw">HAVING</span> <span class="fn">COUNT</span>(e.id) <span class="op">></span> <span class="num">0</span>
+<span class="kw">ORDER BY</span> total_base_payroll <span class="kw">DESC</span>;
+                        </div>
+                    </div>
+
+                    <!-- Payment Method Distribution -->
+                    <div>
+                        <h3 class="h6 fw-bold">9.2 Payment Method Distribution with Pivot Aggregations</h3>
+                        <div class="sql-box">
+<span class="kw">SELECT</span> 
+    pm.payment_method,
+    <span class="fn">COUNT</span>(pm.id) <span class="kw">AS</span> transaction_count,
+    <span class="fn">COALESCE</span>(<span class="fn">SUM</span>(pm.amount_paid), <span class="num">0.00</span>) <span class="kw">AS</span> total_amount,
+    <span class="fn">COALESCE</span>(<span class="fn">AVG</span>(pm.amount_paid), <span class="num">0.00</span>) <span class="kw">AS</span> avg_transaction_size,
+    <span class="fn">ROUND</span>(
+        (<span class="fn">SUM</span>(pm.amount_paid) <span class="op">/</span> (
+            <span class="kw">SELECT</span> <span class="fn">SUM</span>(amount_paid) <span class="kw">FROM</span> <span class="tbl">payments</span> <span class="kw">WHERE</span> status <span class="op">=</span> <span class="str">'SUCCESSFUL'</span>
+        )) <span class="op">*</span> <span class="num">100</span>, <span class="num">2</span>
+    ) <span class="kw">AS</span> volume_share_percentage
+<span class="kw">FROM</span> <span class="tbl">payments</span> pm
+<span class="kw">WHERE</span> pm.status <span class="op">=</span> <span class="str">'SUCCESSFUL'</span>
+<span class="kw">GROUP BY</span> pm.payment_method
+<span class="kw">ORDER BY</span> total_amount <span class="kw">DESC</span>;
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 10. Salary Calculation Model & SQL -->
+            <section id="salary-calculation" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-calculator"></i> 10. Monthly Salary Calculation Model & SQL Implementation
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <h3 class="h6 fw-bold mb-3">10.1 Mathematical Formal Formulae</h3>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary">
+                                <div class="fw-bold text-primary mb-1">Daily Salary Rate ($R_D$)</div>
+                                <code>R_D = Basic Salary / Total Working Days</code>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary">
+                                <div class="fw-bold text-danger mb-1">Unpaid Leave Deduction ($D_L$)</div>
+                                <code>D_L = R_D &times; Unpaid Leave Days</code>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary">
+                                <div class="fw-bold text-success mb-1">Overtime Payment ($P_{OT}$)</div>
+                                <code>P_{OT} = Overtime Hours &times; Overtime Hourly Rate</code>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary">
+                                <div class="fw-bold text-warning mb-1">Gross Salary ($S_{Gross}$)</div>
+                                <code>S_{Gross} = Basic + Allowances + P_{OT}</code>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary">
+                                <div class="fw-bold text-danger mb-1">Total Deductions ($D_{Total}$)</div>
+                                <code>D_{Total} = D_L + Tax + PF + Other Deductions</code>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary">
+                                <div class="fw-bold text-success mb-1">Net Disbursable Salary ($S_{Net}$)</div>
+                                <code>S_{Net} = S_{Gross} - D_{Total}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="h6 fw-bold mb-2">10.2 Pure SQL Equivalent Calculation Query</h3>
+                    <p class="text-muted small">
+                        This analytical query reproduces the exact Python business logic directly within the MySQL database engine:
+                    </p>
+                    <div class="sql-box">
+<span class="kw">SELECT</span> 
+    e.id <span class="kw">AS</span> employee_id,
+    e.employee_code,
+    s.base_salary <span class="kw">AS</span> basic_pay,
+    (s.hra <span class="op">+</span> s.transport_allowance <span class="op">+</span> s.medical_allowance <span class="op">+</span> s.other_allowances) <span class="kw">AS</span> allowances_total,
+    <span class="fn">ROUND</span>(a.overtime_hours <span class="op">*</span> <span class="fn">COALESCE</span>(
+        <span class="kw">CASE WHEN</span> a.overtime_rate <span class="op">></span> <span class="num">0</span> <span class="kw">THEN</span> a.overtime_rate <span class="kw">ELSE</span> s.hourly_rate <span class="kw">END</span>, <span class="num">0.00</span>
+    ), <span class="num">2</span>) <span class="kw">AS</span> overtime_pay,
+    <span class="cm">-- Gross Pay</span>
+    <span class="fn">ROUND</span>(
+        s.base_salary <span class="op">+</span> (s.hra <span class="op">+</span> s.transport_allowance <span class="op">+</span> s.medical_allowance <span class="op">+</span> s.other_allowances) <span class="op">+</span>
+        (a.overtime_hours <span class="op">*</span> <span class="fn">COALESCE</span>(
+            <span class="kw">CASE WHEN</span> a.overtime_rate <span class="op">></span> <span class="num">0</span> <span class="kw">THEN</span> a.overtime_rate <span class="kw">ELSE</span> s.hourly_rate <span class="kw">END</span>, <span class="num">0.00</span>
+        )), <span class="num">2</span>
+    ) <span class="kw">AS</span> calculated_gross_pay,
+    <span class="cm">-- Leave Deduction</span>
+    <span class="fn">ROUND</span>((s.base_salary <span class="op">/</span> a.total_working_days) <span class="op">*</span> a.unpaid_leaves, <span class="num">2</span>) <span class="kw">AS</span> leave_deduction,
+    <span class="cm">-- Total Deductions</span>
+    <span class="fn">ROUND</span>(
+        ((s.base_salary <span class="op">/</span> a.total_working_days) <span class="op">*</span> a.unpaid_leaves) <span class="op">+</span>
+        (s.base_salary <span class="op">*</span> (s.tax_deduction_rate <span class="op">/</span> <span class="num">100.0</span>)) <span class="op">+</span>
+        (s.base_salary <span class="op">*</span> (s.pf_deduction_rate <span class="op">/</span> <span class="num">100.0</span>)) <span class="op">+</span>
+        s.other_deductions, <span class="num">2</span>
+    ) <span class="kw">AS</span> calculated_total_deductions,
+    <span class="cm">-- Net Pay</span>
+    <span class="fn">ROUND</span>(
+        (s.base_salary <span class="op">+</span> (s.hra <span class="op">+</span> s.transport_allowance <span class="op">+</span> s.medical_allowance <span class="op">+</span> s.other_allowances) <span class="op">+</span>
+        (a.overtime_hours <span class="op">*</span> <span class="fn">COALESCE</span>(
+            <span class="kw">CASE WHEN</span> a.overtime_rate <span class="op">></span> <span class="num">0</span> <span class="kw">THEN</span> a.overtime_rate <span class="kw">ELSE</span> s.hourly_rate <span class="kw">END</span>, <span class="num">0.00</span>
+        ))) <span class="op">-</span>
+        (((s.base_salary <span class="op">/</span> a.total_working_days) <span class="op">*</span> a.unpaid_leaves) <span class="op">+</span>
+        (s.base_salary <span class="op">*</span> (s.tax_deduction_rate <span class="op">/</span> <span class="num">100.0</span>)) <span class="op">+</span>
+        (s.base_salary <span class="op">*</span> (s.pf_deduction_rate <span class="op">/</span> <span class="num">100.0</span>)) <span class="op">+</span>
+        s.other_deductions), <span class="num">2</span>
+    ) <span class="kw">AS</span> calculated_net_pay
+<span class="kw">FROM</span> <span class="tbl">employees</span> e
+<span class="kw">INNER JOIN</span> <span class="tbl">salary_settings</span> s <span class="kw">ON</span> e.id <span class="op">=</span> s.employee_id
+<span class="kw">INNER JOIN</span> <span class="tbl">attendance</span> a <span class="kw">ON</span> e.id <span class="op">=</span> a.employee_id
+<span class="kw">WHERE</span> a.year <span class="op">=</span> %s <span class="kw">AND</span> a.month <span class="op">=</span> %s <span class="kw">AND</span> e.status <span class="op">=</span> <span class="str">'ACTIVE'</span>;
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 11. Transaction Management & ACID -->
+            <section id="acid" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-shield-lock"></i> 11. Transaction Architecture & ACID Guarantees
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Financial ledger mutations must adhere to rigorous <strong>ACID</strong> guarantees. In the Payroll and Payment modules, transactions are orchestrated via database connection transaction contexts:
+                    </p>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary h-100">
+                                <div class="fw-bold text-primary mb-1"><i class="bi bi-check-circle me-1"></i> Atomicity ("All or Nothing")</div>
+                                <div class="text-muted small">
+                                    When recording a payment, the creation of the <code>payments</code> record and the status change of the <code>payroll</code> statement to <code>'PAID'</code> occur inside the same transaction block. If either statement fails, the entire transaction issues a <code>ROLLBACK</code>, leaving no partial state.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary h-100">
+                                <div class="fw-bold text-success mb-1"><i class="bi bi-check2-all me-1"></i> Consistency (Invariant Preservation)</div>
+                                <div class="text-muted small">
+                                    Database constraints enforce validity at the storage layer: <code>CHK_attendance_month (1..12)</code>, <code>uq_payroll_employee_month_year</code> (prohibiting duplicate monthly generation), and non-negative decimal checks.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary h-100">
+                                <div class="fw-bold text-warning mb-1"><i class="bi bi-eye-slash me-1"></i> Isolation (Repeatable Read)</div>
+                                <div class="text-muted small">
+                                    InnoDB executes under <code>REPEATABLE READ</code> isolation level using multi-version concurrency control (MVCC). Read queries see a consistent snapshot without dirty reads ($G_1$) or non-repeatable reads ($G_2$).
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-body-tertiary h-100">
+                                <div class="fw-bold text-info mb-1"><i class="bi bi-hdd-network me-1"></i> Durability (Write-Ahead Logging)</div>
+                                <div class="text-muted small">
+                                    Committed transactions write to the InnoDB redo log buffer and are flushed to disk (<code>ib_logfile</code>) before acknowledging success, guaranteeing survival across process restarts.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fw-bold fs-sm text-secondary mb-1">Atomic Transaction Flow Implementation (Python Service Level):</div>
+                    <div class="sql-box">
+<span class="cm"># Python Transaction Management via DB Connection Context:</span>
+conn = get_db_connection()
+<span class="kw">try</span>:
+    cursor = conn.cursor(dictionary=True)
+    <span class="cm"># 1. Insert Payment Voucher</span>
+    cursor.execute(<span class="str">"""
+        INSERT INTO payments (payroll_id, payment_reference, payment_method, amount_paid, payment_date, status)
+        VALUES (%s, %s, %s, %s, %s, 'SUCCESSFUL');
+    """</span>, (payroll_id, ref, method, amount, payment_date))
+
+    <span class="cm"># 2. Update Payroll Statement Status</span>
+    cursor.execute(<span class="str">"""
+        UPDATE payroll SET status = 'PAID', updated_at = NOW() WHERE id = %s;
+    """</span>, (payroll_id,))
+
+    conn.commit()  <span class="cm"># Atomically persist changes</span>
+<span class="kw">except</span> Exception <span class="kw">as</span> err:
+    conn.rollback()  <span class="cm"># Revert all changes on any runtime or constraint failure</span>
+    <span class="kw">raise</span> err
+<span class="kw">finally</span>:
+    conn.close()
+                    </div>
+                </div>
+            </section>
+
+            <!-- 12. Sample Dataset & Verification -->
+            <section id="sample-data" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-card-checklist"></i> 12. Sample Dataset & Mathematical Verification
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Concrete walkthrough verifying salary computation across active test records:
+                    </p>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm small align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Employee A (Senior Software Eng)</th>
+                                    <th>Employee B (HR Specialist)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Employee Code</strong></td><td><code>EMP001</code></td><td><code>EMP002</code></td></tr>
+                                <tr><td><strong>Base Salary</strong></td><td>&#8377;75,000.00</td><td>&#8377;45,000.00</td></tr>
+                                <tr><td><strong>Allowances (HRA + Med + Trans)</strong></td><td>&#8377;18,000.00</td><td>&#8377;10,000.00</td></tr>
+                                <tr><td><strong>Working Days in Month</strong></td><td>30</td><td>30</td></tr>
+                                <tr><td><strong>Daily Salary Rate</strong></td><td>&#8377;75,000 / 30 = &#8377;2,500.00</td><td>&#8377;45,000 / 30 = &#8377;1,500.00</td></tr>
+                                <tr><td><strong>Unpaid Leaves</strong></td><td>2.0 Days</td><td>0.0 Days</td></tr>
+                                <tr><td><strong>Leave Deduction</strong></td><td>2.0 &times; &#8377;2,500 = &#8377;5,000.00</td><td>0.0 &times; &#8377;1,500 = &#8377;0.00</td></tr>
+                                <tr><td><strong>Overtime (Hours & Rate)</strong></td><td>5 hrs @ &#8377;500/hr = &#8377;2,500.00</td><td>0 hrs @ &#8377;300/hr = &#8377;0.00</td></tr>
+                                <tr><td><strong>Gross Salary</strong></td><td>&#8377;75,000 + &#8377;18,000 + &#8377;2,500 = &#8377;95,500.00</td><td>&#8377;45,000 + &#8377;10,000 + &#8377;0 = &#8377;55,000.00</td></tr>
+                                <tr><td><strong>Total Deductions</strong></td><td>&#8377;5,000.00 (Leave)</td><td>&#8377;0.00</td></tr>
+                                <tr class="table-success"><td><strong>Net Disbursable Salary</strong></td><td><strong>&#8377;90,500.00</strong></td><td><strong>&#8377;55,000.00</strong></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 13. Demonstrated DBMS Concepts Index -->
+            <section id="concepts-index" class="card bg-card border shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h2 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                        <i class="bi bi-bookmark-check"></i> 13. Comprehensive Index of Demonstrated DBMS Concepts
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Cross-reference mapping core database management curriculum topics to concrete implementations within this project:
+                    </p>
+
+                    <div class="row g-2">
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Primary Key (PK)</strong>: Surrogate auto-increment keys on all 6 tables.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Foreign Key (FK)</strong>: Referenced constraint enforcement across relations.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Candidate Keys</strong>: Composite unique keys <code>(employee_id, year, month)</code>.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Referential Integrity</strong>: <code>ON DELETE RESTRICT</code> audit protection.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Cascade Updates</strong>: <code>ON UPDATE CASCADE</code> synthetic synchronization.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Domain Constraints</strong>: <code>CHECK (month BETWEEN 1 AND 12)</code>.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>1NF / 2NF / 3NF</strong>: Normalization proofs eliminating redundancy and anomalies.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>INNER JOIN</strong>: Exact relational intersection for active employee payrolls.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>LEFT OUTER JOIN</strong>: Unpaid reconciliation preserving zero-payment rows.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>GROUP BY & HAVING</strong>: Multi-level departmental aggregations.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Aggregate Functions</strong>: <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>, <code>COUNT</code>.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Null Value Handling</strong>: <code>COALESCE</code> replacing null aggregates with <code>0.00</code>.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Conditional Aggregation</strong>: <code>CASE WHEN</code> statements inside <code>COUNT</code>/<code>SUM</code>.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Secondary Indexes</strong>: B-tree indexes on <code>(year, month)</code> and <code>status</code>.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>SQL Injection Defense</strong>: Parameterized queries with prepared statements.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>ACID Properties</strong>: Transaction boundaries with commit and rollback.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Connection Pooling</strong>: Reusable MySQL connection pool reducing handshake latency.</div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-body-tertiary small"><span class="concept-badge">Concept</span> <strong>Pagination Architecture</strong>: <code>LIMIT ? OFFSET ?</code> analytical query windowing.</div></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Mermaid.js for ER Diagram Rendering -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            er: {
+                useMaxWidth: true,
+                diagramPadding: 20
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Payroll Record | PayMaster Pro{% endblock %}
+
+{% block header_title %}Individual Payroll Generator{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('payroll.index') }}" class="text-decoration-none text-muted small hover-primary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Payroll Ledger
+            </a>
+            <span class="text-muted small">&bull; Module 6 Generation</span>
+        </div>
+        <h1 class="h2 fw-extrabold text-main mb-0">Generate Individual Payroll</h1>
+        <p class="text-muted small mb-0">
+            Verify attendance and compensation components with interactive calculation preview before persisting the payroll statement.
+        </p>
+    </div>
+
+    <div>
+        <a href="{{ url_for('payroll.batch_run') }}" class="btn btn-outline-primary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnSwitchBatch">
+            <i class="bi bi-layers-fill"></i> Switch to Batch Run
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Generator Form Column -->
+    <div class="col-lg-5">
+        <div class="glass-card p-4 shadow-sm h-100">
+            <h5 class="fw-bold text-main mb-3">
+                <i class="bi bi-person-badge me-2 text-primary"></i> Target Employee &amp; Period
+            </h5>
+
+            <form method="POST" action="{{ url_for('payroll.generate_individual') }}" id="generatePayrollForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- Employee Selection -->
+                <div class="mb-3">
+                    <label for="selectEmployee" class="form-label fw-semibold text-main small">Select Employee <span class="text-danger">*</span></label>
+                    <select name="employee_id" id="selectEmployee" class="form-select" required onchange="updatePreview()">
+                        <option value="">-- Choose Active Employee --</option>
+                        {% for emp in active_employees %}
+                            <option value="{{ emp.id }}" {% if selected_employee_id == emp.id %}selected{% endif %}>
+                                {{ emp.first_name }} {{ emp.last_name }} ({{ emp.employee_code }}) &bull; {{ emp.department }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text fs-xs text-muted">Only active staff are eligible for payroll generation.</div>
+                </div>
+
+                <!-- Period Selection -->
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <label for="selectMonth" class="form-label fw-semibold text-main small">Payroll Month <span class="text-danger">*</span></label>
+                        <select name="month" id="selectMonth" class="form-select" required onchange="updatePreview()">
+                            {% for m_num, m_name in month_names.items() %}
+                                <option value="{{ m_num }}" {% if selected_month == m_num %}selected{% endif %}>
+                                    {{ m_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <label for="selectYear" class="form-label fw-semibold text-main small">Payroll Year <span class="text-danger">*</span></label>
+                        <select name="year" id="selectYear" class="form-select" required onchange="updatePreview()">
+                            {% for yr in available_years %}
+                                <option value="{{ yr }}" {% if selected_year == yr %}selected{% endif %}>
+                                    {{ yr }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Remarks -->
+                <div class="mb-4">
+                    <label for="inputRemarks" class="form-label fw-semibold text-main small">Audit Remarks / Notes</label>
+                    <textarea name="remarks" id="inputRemarks" class="form-control" rows="3" placeholder="Optional audit memo or adjustment justification..."></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    class="btn btn-primary w-100 py-2 shadow-sm d-flex align-items-center justify-content-center gap-2" 
+                    id="btnSubmitGenerate"
+                    {% if not preview_data or preview_data.status != 'success' %}disabled{% endif %}
+                >
+                    <i class="bi bi-file-earmark-plus-fill"></i> Generate Draft Payroll Record
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Live Preview Column -->
+    <div class="col-lg-7">
+        <div class="glass-card p-4 shadow-sm h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-main mb-0">
+                    <i class="bi bi-calculator me-2 text-primary"></i> Calculation Preview
+                </h5>
+                {% if preview_data and preview_data.status == 'success' %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                        <i class="bi bi-check-circle me-1"></i> Verified &amp; Ready
+                    </span>
+                {% endif %}
+            </div>
+
+            {% if not selected_employee_id %}
+                <!-- Empty State -->
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-person-bounding-box fs-1 text-secondary opacity-50 mb-3 d-block"></i>
+                    <h6 class="fw-bold">No Employee Selected</h6>
+                    <p class="small text-muted mb-0">
+                        Select an employee and payroll period on the left to verify salary structures, attendance hours, and deductions before saving.
+                    </p>
+                </div>
+            {% elif preview_data and preview_data.status == 'missing_attendance' %}
+                <!-- Missing Attendance Warning -->
+                <div class="alert alert-warning border-warning shadow-sm" role="alert">
+                    <div class="d-flex gap-2">
+                        <i class="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
+                        <div>
+                            <h6 class="alert-heading fw-bold mb-1">Attendance Record Missing</h6>
+                            <p class="small mb-2">{{ preview_data.error_message }}</p>
+                            <a href="{{ url_for('attendance.add_record') }}" class="btn btn-warning btn-sm" target="_blank">
+                                <i class="bi bi-plus-circle me-1"></i> Log Monthly Attendance
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% elif preview_data and preview_data.status == 'missing_salary_settings' %}
+                <!-- Missing Salary Settings Warning -->
+                <div class="alert alert-danger border-danger shadow-sm" role="alert">
+                    <div class="d-flex gap-2">
+                        <i class="bi bi-x-octagon-fill fs-4 text-danger"></i>
+                        <div>
+                            <h6 class="alert-heading fw-bold mb-1">Compensation Profile Incomplete</h6>
+                            <p class="small mb-2">{{ preview_data.error_message }}</p>
+                            <a href="{{ url_for('salary.edit', employee_id=selected_employee_id) }}" class="btn btn-danger btn-sm" target="_blank">
+                                <i class="bi bi-gear-fill me-1"></i> Configure Salary Structure
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% elif preview_data and preview_data.status == 'calculation_error' %}
+                <!-- Calculation Exception Warning -->
+                <div class="alert alert-danger border-danger shadow-sm" role="alert">
+                    <h6 class="alert-heading fw-bold mb-1">Calculation Error</h6>
+                    <p class="small mb-0">{{ preview_data.error_message }}</p>
+                </div>
+            {% elif preview_data and preview_data.status == 'success' %}
+                {% set calc = preview_data.calculation %}
+                {% set emp = preview_data.employee %}
+                {% set att = preview_data.attendance %}
+                {% set scfg = preview_data.salary_settings %}
+
+                <!-- Statement Preview Details -->
+                <div class="p-3 bg-body-tertiary rounded-3 mb-3 border">
+                    <div class="row g-2">
+                        <div class="col-sm-6">
+                            <span class="text-muted fs-xs text-uppercase d-block">Employee</span>
+                            <span class="fw-bold text-main">{{ emp.first_name }} {{ emp.last_name }}</span>
+                            <span class="badge bg-secondary-subtle text-secondary fs-xs ms-1">{{ emp.employee_code }}</span>
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <span class="text-muted fs-xs text-uppercase d-block">Department &amp; Title</span>
+                            <span class="small text-main">{{ emp.department }} &bull; {{ emp.designation }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two-Column Financial Breakdown (in INR) -->
+                <div class="row g-3 mb-3">
+                    <!-- Earnings / Additions Column -->
+                    <div class="col-sm-6">
+                        <div class="p-3 rounded-3 border bg-success-subtle bg-opacity-10 h-100">
+                            <h6 class="fw-bold text-success mb-2 d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-plus-circle me-1"></i> Earnings</span>
+                                <span>{{ calc.gross_salary|inr }}</span>
+                            </h6>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between py-1 small">
+                                <span class="text-muted">Basic Salary:</span>
+                                <span class="fw-semibold text-main">{{ calc.basic_salary|inr }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 small">
+                                <span class="text-muted">Allowances Total:</span>
+                                <span class="fw-semibold text-success">+{{ calc.allowances|inr }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 small">
+                                <span class="text-muted">Overtime Pay ({{ calc.overtime_hours }}h @ {{ calc.overtime_rate|inr }}):</span>
+                                <span class="fw-semibold text-success">+{{ calc.overtime_payment|inr }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between pt-2 border-top fw-bold text-main">
+                                <span>Gross Pay:</span>
+                                <span class="text-success">{{ calc.gross_salary|inr }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deductions Column -->
+                    <div class="col-sm-6">
+                        <div class="p-3 rounded-3 border bg-danger-subtle bg-opacity-10 h-100">
+                            <h6 class="fw-bold text-danger mb-2 d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-dash-circle me-1"></i> Deductions</span>
+                                <span>-{{ calc.total_deductions|inr }}</span>
+                            </h6>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between py-1 small">
+                                <span class="text-muted">Daily Rate ({{ calc.total_working_days }}d):</span>
+                                <span class="fw-semibold text-main">{{ calc.daily_salary|inr }}/day</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 small">
+                                <span class="text-muted">Unpaid Leave ({{ calc.unpaid_leave_days }}d):</span>
+                                <span class="fw-semibold text-danger">-{{ calc.leave_deduction|inr }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-1 small">
+                                <span class="text-muted">Other Deductions:</span>
+                                <span class="fw-semibold text-danger">-{{ calc.other_deductions|inr }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between pt-2 border-top fw-bold text-main">
+                                <span>Total Deductions:</span>
+                                <span class="text-danger">-{{ calc.total_deductions|inr }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Net Take-Home Highlight Banner (in INR) -->
+                <div class="p-3 rounded-3 bg-primary-subtle border border-primary-subtle d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-primary fw-bold text-uppercase fs-xs d-block">Estimated Net Take-Home Pay</span>
+                        <small class="text-muted">Gross Salary minus Total Deductions</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="fs-4 fw-extrabold text-primary" id="previewNetPay">{{ calc.net_salary|inr }}</span>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function updatePreview() {
+    const empId = document.getElementById('selectEmployee').value;
+    const month = document.getElementById('selectMonth').value;
+    const year = document.getElementById('selectYear').value;
+
+    if (empId) {
+        window.location.href = `{{ url_for('payroll.generate_individual') }}?employee_id=${empId}&month=${month}&year=${year}`;
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Management &amp; Salary Disbursements | PayMaster Pro{% endblock %}
+
+{% block header_title %}Disbursement &amp; Payment Ledger{% endblock %}
+
+{% block content %}
+<!-- Academic Application Disclaimer Notice -->
+<div class="alert alert-warning border border-warning-subtle shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
+    <div class="p-2 bg-warning bg-opacity-25 rounded-circle text-warning d-flex align-items-center justify-content-center">
+        <i class="bi bi-info-circle-fill fs-4"></i>
+    </div>
+    <div class="small">
+        <strong class="text-main">Academic Demonstration Application:</strong>
+        <span class="text-muted ms-1">
+            This module records and audits compensation disbursement transactions for educational purposes. 
+            <strong>No actual bank transfer or monetary exchange is performed.</strong>
+        </span>
+    </div>
+</div>
+
+<!-- Page Header & Action Bar -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-bank me-1"></i> Module 7 Active
+            </span>
+            <span class="text-muted small">&bull; Financial Disbursements &amp; Vouchers</span>
+        </div>
+        <h1 class="h2 fw-extrabold text-main mb-0">Payment Management</h1>
+        <p class="text-muted small mb-0">
+            Record employee salary disbursements, verify transaction references, manage reversals, and generate official salary slips.
+        </p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('payments.awaiting') }}" class="btn btn-warning px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2 position-relative" id="btnAwaitingDisbursements">
+            <i class="bi bi-clock-history"></i> Awaiting Payment
+            {% if awaiting_count > 0 %}
+                <span class="badge bg-danger rounded-pill">{{ awaiting_count }}</span>
+            {% endif %}
+        </a>
+        <a href="{{ url_for('payroll.index') }}" class="btn btn-outline-primary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnPayrollLedger">
+            <i class="bi bi-calculator"></i> Payroll Ledger
+        </a>
+    </div>
+</div>
+
+<!-- Summary Financial KPI Cards (in INR ₹) -->
+<div class="row g-3 mb-4" id="paymentSummaryCards">
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-success">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Total Disbursed</span>
+                <div class="p-2 bg-success-subtle text-success rounded-3">
+                    <i class="bi bi-cash-stack fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1 text-success" id="statTotalDisbursed">{{ summary.total_disbursed|inr }}</h3>
+            <span class="text-muted fs-xs">Successful compensation paid</span>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-primary">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Completed Payments</span>
+                <div class="p-2 bg-primary-subtle text-primary rounded-3">
+                    <i class="bi bi-patch-check-fill fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1 text-main" id="statSuccessfulCount">{{ summary.successful_count }}</h3>
+            <span class="text-muted fs-xs">Confirmed financial transactions</span>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-warning">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Pending Authorization</span>
+                <div class="p-2 bg-warning-subtle text-warning rounded-3">
+                    <i class="bi bi-hourglass-split fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1 text-warning" id="statPendingCount">{{ summary.pending_count }}</h3>
+            <span class="text-muted fs-xs">In-flight transactions</span>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-danger">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Reversals &amp; Failed</span>
+                <div class="p-2 bg-danger-subtle text-danger rounded-3">
+                    <i class="bi bi-arrow-counterclockwise fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1 text-danger" id="statReversedCount">{{ summary.reversed_count + summary.failed_count }}</h3>
+            <span class="text-muted fs-xs">{{ summary.reversed_count }} Reversed &bull; {{ summary.failed_count }} Failed</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filtering Toolbar -->
+<div class="glass-card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('payments.index') }}" class="row g-2 align-items-center" id="paymentFilterForm">
+        <!-- Search query -->
+        <div class="col-md-3">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-body-tertiary border-color text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input 
+                    type="text" 
+                    name="search" 
+                    class="form-control" 
+                    placeholder="Search ref, code, employee..." 
+                    value="{{ search_query }}"
+                    id="paymentSearchInput"
+                >
+            </div>
+        </div>
+
+        <!-- Month Filter -->
+        <div class="col-sm-6 col-md-2">
+            <select name="month" class="form-select form-select-sm" id="paymentMonthSelect">
+                <option value="">All Months</option>
+                {% for m_num, m_name in month_names.items() %}
+                    <option value="{{ m_num }}" {% if selected_month == m_num %}selected{% endif %}>{{ m_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Year Filter -->
+        <div class="col-sm-6 col-md-2">
+            <select name="year" class="form-select form-select-sm" id="paymentYearSelect">
+                <option value="">All Years</option>
+                {% for yr in available_years %}
+                    <option value="{{ yr }}" {% if selected_year == yr %}selected{% endif %}>{{ yr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="col-sm-6 col-md-2">
+            <select name="status" class="form-select form-select-sm" id="paymentStatusSelect">
+                <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>All Statuses</option>
+                <option value="SUCCESSFUL" {% if status_filter == 'SUCCESSFUL' %}selected{% endif %}>Successful</option>
+                <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
+                <option value="REVERSED" {% if status_filter == 'REVERSED' %}selected{% endif %}>Reversed</option>
+            </select>
+        </div>
+
+        <!-- Payment Method Filter -->
+        <div class="col-sm-6 col-md-2">
+            <select name="method" class="form-select form-select-sm" id="paymentMethodSelect">
+                <option value="ALL" {% if method_filter == 'ALL' %}selected{% endif %}>All Methods</option>
+                {% for m in payment_methods %}
+                    <option value="{{ m }}" {% if method_filter == m %}selected{% endif %}>{{ m.replace('_', ' ').title() }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm px-3" id="btnFilterPayments">
+                <i class="bi bi-funnel me-1"></i> Filter
+            </button>
+            {% if search_query or selected_month or selected_year or status_filter != 'ALL' or method_filter != 'ALL' %}
+            <a href="{{ url_for('payments.index') }}" class="btn btn-outline-secondary btn-sm" id="btnClearPaymentFilter" title="Reset Filters">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Payment Vouchers Table -->
+<div class="glass-card shadow-sm overflow-hidden mb-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="paymentTable">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th scope="col" class="ps-4">Reference &bull; Date</th>
+                    <th scope="col">Employee</th>
+                    <th scope="col" class="text-center">Payroll Code</th>
+                    <th scope="col" class="text-center">Method</th>
+                    <th scope="col" class="text-end">Amount Disbursed</th>
+                    <th scope="col" class="text-center">Status</th>
+                    <th scope="col" class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if payments %}
+                    {% for p in payments %}
+                    <tr id="row-payment-{{ p.id }}">
+                        <!-- Reference & Date -->
+                        <td class="ps-4">
+                            <div class="font-monospace fw-bold text-primary">
+                                <a href="{{ url_for('payments.view', payment_id=p.id) }}" class="text-decoration-none">
+                                    {{ p.payment_reference }}
+                                </a>
+                            </div>
+                            <span class="text-muted fs-xs">{{ p.payment_date }}</span>
+                        </td>
+
+                        <!-- Employee Info -->
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-circle-sm bg-primary-subtle text-primary fw-bold">
+                                    {{ p.first_name[0] }}{{ p.last_name[0] }}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-main">{{ p.full_name }}</div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-secondary-subtle text-secondary fs-xs">{{ p.employee_code }}</span>
+                                        <span class="text-muted fs-xs">{{ p.department }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Payroll Code -->
+                        <td class="text-center">
+                            <a href="{{ url_for('payroll.view', payroll_id=p.payroll_id) }}" class="text-decoration-none font-monospace small">
+                                {{ p.payroll_code }}
+                            </a>
+                        </td>
+
+                        <!-- Payment Method Badge -->
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border">
+                                {% if p.payment_method == 'BANK_TRANSFER' %}
+                                    <i class="bi bi-bank me-1"></i> Bank Transfer
+                                {% elif p.payment_method == 'CHEQUE' %}
+                                    <i class="bi bi-card-text me-1"></i> Cheque
+                                {% elif p.payment_method == 'CASH' %}
+                                    <i class="bi bi-cash me-1"></i> Cash
+                                {% elif p.payment_method == 'UPI' %}
+                                    <i class="bi bi-phone me-1"></i> UPI
+                                {% else %}
+                                    {{ p.payment_method.replace('_', ' ').title() }}
+                                {% endif %}
+                            </span>
+                        </td>
+
+                        <!-- Amount Paid in INR -->
+                        <td class="text-end">
+                            <div class="fw-extrabold text-success fs-6">{{ p.amount_paid|inr }}</div>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td class="text-center">
+                            {% if p.status == 'SUCCESSFUL' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Successful
+                                </span>
+                            {% elif p.status == 'PENDING' %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                    <i class="bi bi-clock-history me-1"></i> Pending
+                                </span>
+                            {% elif p.status == 'FAILED' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                    <i class="bi bi-x-circle me-1"></i> Failed
+                                </span>
+                            {% elif p.status == 'REVERSED' %}
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reversed
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary px-2 py-1">{{ p.status }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="text-end pe-4">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('payments.view', payment_id=p.id) }}" class="btn btn-outline-primary" title="View Voucher Receipt" id="btnViewPayment-{{ p.id }}">
+                                    <i class="bi bi-receipt"></i>
+                                </a>
+                                <a href="{{ url_for('payments.salary_slip', payroll_id=p.payroll_id) }}" class="btn btn-outline-success" title="Salary Slip" id="btnSalarySlip-{{ p.id }}">
+                                    <i class="bi bi-file-earmark-text"></i> Slip
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-bank fs-2 d-block mb-2 text-secondary"></i>
+                            No payment transactions found matching your criteria.
+                            {% if awaiting_count > 0 %}
+                            <div class="mt-2">
+                                <a href="{{ url_for('payments.awaiting') }}" class="btn btn-sm btn-warning">
+                                    Review {{ awaiting_count }} Approved Statements Awaiting Payment
+                                </a>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    {% if total_count > 0 %}
+    <div class="p-3 border-top d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+        <div class="text-muted small">
+            Showing <strong>{{ ((page - 1) * per_page) + 1 }}</strong> to 
+            <strong>{{ (page * per_page) if (page * per_page) < total_count else total_count }}</strong> of 
+            <strong>{{ total_count }}</strong> payment vouchers
+        </div>
+
+        {% if total_pages > 1 %}
+        <nav aria-label="Payment pagination">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('payments.index', page=page-1, search=search_query, month=selected_month, year=selected_year, status=status_filter, method=method_filter) }}">
+                        &laquo; Prev
+                    </a>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('payments.index', page=p, search=search_query, month=selected_month, year=selected_year, status=status_filter, method=method_filter) }}">
+                            {{ p }}
+                        </a>
+                    </li>
+                {% endfor %}
+                <li class="page-item {% if not has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('payments.index', page=page+1, search=search_query, month=selected_month, year=selected_year, status=status_filter, method=method_filter) }}">
+                        Next &raquo;
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

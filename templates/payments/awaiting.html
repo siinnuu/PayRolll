@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Approved Payroll Awaiting Payment | PayMaster Pro{% endblock %}
+
+{% block header_title %}Disbursement Queue{% endblock %}
+
+{% block content %}
+<!-- Academic Disclaimer Banner -->
+<div class="alert alert-warning border border-warning-subtle shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
+    <div class="p-2 bg-warning bg-opacity-25 rounded-circle text-warning d-flex align-items-center justify-content-center">
+        <i class="bi bi-info-circle-fill fs-4"></i>
+    </div>
+    <div class="small">
+        <strong class="text-main">Academic Demonstration Application:</strong>
+        <span class="text-muted ms-1">
+            Statements listed below have been finalized and approved in Module 6. 
+            Recording a disbursement updates the database audit ledger &mdash; <strong>no real banking transactions occur</strong>.
+        </span>
+    </div>
+</div>
+
+<!-- Page Header & Action Bar -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('payments.index') }}" class="text-decoration-none text-muted small hover-primary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Payment Ledger
+            </a>
+            <span class="text-muted small">&bull; Module 7 Queue</span>
+        </div>
+        <h1 class="h2 fw-extrabold text-main mb-0">Approved Payroll Awaiting Payment</h1>
+        <p class="text-muted small mb-0">
+            Review finalized payroll records approved for compensation disbursement.
+        </p>
+    </div>
+
+    <div>
+        <a href="{{ url_for('payroll.index') }}" class="btn btn-outline-secondary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnBackPayroll">
+            <i class="bi bi-calculator"></i> Payroll Processing
+        </a>
+    </div>
+</div>
+
+<!-- Period Selection Filter -->
+<div class="glass-card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('payments.awaiting') }}" class="row g-2 align-items-center" id="awaitingFilterForm">
+        <div class="col-auto">
+            <span class="fw-bold text-main small">Filter Payroll Period:</span>
+        </div>
+
+        <div class="col-sm-4 col-md-3">
+            <select name="month" class="form-select form-select-sm" id="queueMonthSelect" onchange="this.form.submit()">
+                <option value="">All Months</option>
+                {% for m_num, m_name in month_names.items() %}
+                    <option value="{{ m_num }}" {% if selected_month == m_num %}selected{% endif %}>{{ m_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-sm-4 col-md-3">
+            <select name="year" class="form-select form-select-sm" id="queueYearSelect" onchange="this.form.submit()">
+                <option value="">All Years</option>
+                {% for yr in available_years %}
+                    <option value="{{ yr }}" {% if selected_year == yr %}selected{% endif %}>{{ yr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-primary btn-sm" id="btnFilterQueue">
+                <i class="bi bi-funnel me-1"></i> Filter
+            </button>
+            {% if selected_month or selected_year %}
+            <a href="{{ url_for('payments.awaiting') }}" class="btn btn-outline-secondary btn-sm" id="btnClearQueue">
+                <i class="bi bi-x-circle"></i> Reset
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Queue Statements Table -->
+<div class="glass-card shadow-sm overflow-hidden mb-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="queueTable">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th scope="col" class="ps-4">Statement Code</th>
+                    <th scope="col">Employee</th>
+                    <th scope="col" class="text-center">Period</th>
+                    <th scope="col" class="text-end">Gross Pay</th>
+                    <th scope="col" class="text-end">Deductions</th>
+                    <th scope="col" class="text-end">Net Payable</th>
+                    <th scope="col" class="text-end pe-4">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if records %}
+                    {% for row in records %}
+                    <tr id="row-queue-{{ row.id }}">
+                        <!-- Payroll Code -->
+                        <td class="ps-4">
+                            <div class="font-monospace fw-bold text-primary">
+                                <a href="{{ url_for('payroll.view', payroll_id=row.id) }}" class="text-decoration-none">
+                                    {{ row.payroll_code }}
+                                </a>
+                            </div>
+                            <span class="text-muted fs-xs">Approved: {{ row.generated_date }}</span>
+                        </td>
+
+                        <!-- Employee Info -->
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-circle-sm bg-primary-subtle text-primary fw-bold">
+                                    {{ row.first_name[0] }}{{ row.last_name[0] }}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-main">{{ row.full_name }}</div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-secondary-subtle text-secondary fs-xs">{{ row.employee_code }}</span>
+                                        <span class="text-muted fs-xs">{{ row.department }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Period -->
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border">
+                                {{ month_names.get(row.month, row.month) }} {{ row.year }}
+                            </span>
+                        </td>
+
+                        <!-- Gross Pay -->
+                        <td class="text-end">
+                            <span class="text-muted small">{{ row.gross_pay|inr }}</span>
+                        </td>
+
+                        <!-- Deductions -->
+                        <td class="text-end">
+                            <span class="text-danger small">-{{ row.total_deductions|inr }}</span>
+                        </td>
+
+                        <!-- Net Payable in INR -->
+                        <td class="text-end">
+                            <div class="fw-extrabold text-success fs-6">{{ row.net_pay|inr }}</div>
+                        </td>
+
+                        <!-- Action Button -->
+                        <td class="text-end pe-4">
+                            <a href="{{ url_for('payments.record_payment', payroll_id=row.id) }}" class="btn btn-sm btn-primary px-3 shadow-sm d-inline-flex align-items-center gap-1" id="btnPayRecord-{{ row.id }}">
+                                <i class="bi bi-cash-coin me-1"></i> Record Payment
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-check2-circle fs-2 d-block mb-2 text-success"></i>
+                            <h6 class="fw-bold text-main mb-1">Queue Clear: No Approved Payrolls Awaiting Payment</h6>
+                            <p class="small text-muted mb-3">
+                                All approved statements have been disbursed, or no statements are currently in APPROVED status.
+                            </p>
+                            <a href="{{ url_for('payroll.index') }}" class="btn btn-sm btn-outline-primary">
+                                Go to Payroll Processing
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

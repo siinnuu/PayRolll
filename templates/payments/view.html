@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Voucher - {{ payment.payment_reference }} | PayMaster Pro{% endblock %}
+
+{% block header_title %}Disbursement Voucher Details{% endblock %}
+
+{% block content %}
+<!-- Academic Disclaimer Notice -->
+<div class="alert alert-warning border border-warning-subtle shadow-sm d-flex align-items-center gap-3 mb-4 d-print-none" role="alert">
+    <div class="p-2 bg-warning bg-opacity-25 rounded-circle text-warning d-flex align-items-center justify-content-center">
+        <i class="bi bi-info-circle-fill fs-4"></i>
+    </div>
+    <div class="small">
+        <strong class="text-main">Academic Demonstration Application:</strong>
+        <span class="text-muted ms-1">
+            Voucher records financial disbursement logs for educational demonstration. 
+            <strong>No actual bank transfer or monetary exchange has occurred.</strong>
+        </span>
+    </div>
+</div>
+
+<!-- Page Header & Action Controls -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 d-print-none">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('payments.index') }}" class="text-decoration-none text-muted small hover-primary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Payment Ledger
+            </a>
+            <span class="text-muted small">&bull; Disbursement Voucher</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <h1 class="h2 fw-extrabold text-main mb-0 font-monospace">{{ payment.payment_reference }}</h1>
+            {% if payment.status == 'SUCCESSFUL' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-check-circle-fill me-1"></i> Disbursed
+                </span>
+            {% elif payment.status == 'PENDING' %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-hourglass-split me-1"></i> Pending
+                </span>
+            {% elif payment.status == 'FAILED' %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-x-circle me-1"></i> Failed
+                </span>
+            {% elif payment.status == 'REVERSED' %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reversed
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('payments.salary_slip', payroll_id=payment.payroll_id) }}" class="btn btn-outline-primary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnViewSalarySlip">
+            <i class="bi bi-file-earmark-text"></i> Salary Slip View
+        </a>
+        <a href="{{ url_for('payments.download_slip_pdf', payroll_id=payment.payroll_id) }}" class="btn btn-primary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnDownloadSlipPDF">
+            <i class="bi bi-file-earmark-pdf"></i> Download PDF Slip
+        </a>
+
+        <!-- Reversal / Status Transition Action -->
+        {% if payment.status == 'SUCCESSFUL' %}
+            <button type="button" class="btn btn-outline-danger px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#reversePaymentModal" id="btnTriggerReverse">
+                <i class="bi bi-arrow-counterclockwise"></i> Reverse Payment
+            </button>
+        {% elif payment.status == 'PENDING' %}
+            <form method="POST" action="{{ url_for('payments.update_status', payment_id=payment.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="confirm">
+                <button type="submit" class="btn btn-success px-3 py-2 rounded-3 shadow-sm">
+                    <i class="bi bi-check-lg me-1"></i> Confirm Paid
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('payments.update_status', payment_id=payment.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="fail">
+                <button type="submit" class="btn btn-outline-danger px-3 py-2 rounded-3 shadow-sm">
+                    <i class="bi bi-x-lg me-1"></i> Mark Failed
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Formal Payment Voucher Card -->
+<div class="glass-card shadow-lg p-4 p-md-5 mb-4">
+    <!-- Corporate Header -->
+    <div class="row align-items-center pb-4 mb-4 border-bottom">
+        <div class="col-sm-7">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="p-2 rounded-3 bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="bi bi-bank fs-4"></i>
+                </div>
+                <h3 class="fw-extrabold text-main mb-0 tracking-tight">PayMaster Pro</h3>
+            </div>
+            <p class="text-muted small mb-0">
+                Official Compensation Disbursement Voucher &bull; Academic Financial Simulation
+            </p>
+        </div>
+
+        <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
+            <div class="p-3 bg-body-tertiary rounded-3 border d-inline-block text-start">
+                <div class="text-muted fs-xs text-uppercase fw-semibold">Disbursement Reference</div>
+                <div class="font-monospace fw-bold text-primary">{{ payment.payment_reference }}</div>
+                <div class="text-muted fs-xs mt-1">Disbursed: {{ payment.payment_date }}</div>
+                <div class="text-muted fs-xs">Statement: <strong>{{ payment.payroll_code }}</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voucher Grid Details -->
+    <div class="row g-4 mb-4">
+        <!-- Beneficiary Information -->
+        <div class="col-md-6">
+            <div class="p-3 bg-body-tertiary rounded-3 border h-100">
+                <h6 class="fw-bold text-uppercase text-muted fs-xs mb-3 border-bottom pb-2">
+                    <i class="bi bi-person me-1"></i> Beneficiary Employee Profile
+                </h6>
+                <div class="row g-2 small">
+                    <div class="col-4 text-muted">Full Name:</div>
+                    <div class="col-8 fw-semibold text-main">{{ payment.full_name }}</div>
+
+                    <div class="col-4 text-muted">Staff Code:</div>
+                    <div class="col-8 font-monospace fw-semibold">{{ payment.employee_code }}</div>
+
+                    <div class="col-4 text-muted">Department:</div>
+                    <div class="col-8 text-main">{{ payment.department }}</div>
+
+                    <div class="col-4 text-muted">Job Title:</div>
+                    <div class="col-8 text-main">{{ payment.designation }}</div>
+
+                    <div class="col-4 text-muted">Email:</div>
+                    <div class="col-8 text-main">{{ payment.email }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Instrument Details -->
+        <div class="col-md-6">
+            <div class="p-3 bg-body-tertiary rounded-3 border h-100">
+                <h6 class="fw-bold text-uppercase text-muted fs-xs mb-3 border-bottom pb-2">
+                    <i class="bi bi-credit-card me-1"></i> Disbursement Details
+                </h6>
+                <div class="row g-2 small">
+                    <div class="col-5 text-muted">Disbursement Method:</div>
+                    <div class="col-7 fw-semibold text-main">
+                        {{ payment.payment_method.replace('_', ' ').title() }}
+                    </div>
+
+                    <div class="col-5 text-muted">Effective Date:</div>
+                    <div class="col-7 fw-semibold text-main">{{ payment.payment_date }}</div>
+
+                    <div class="col-5 text-muted">Disbursement Status:</div>
+                    <div class="col-7">
+                        {% if payment.status == 'SUCCESSFUL' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">SUCCESSFUL</span>
+                        {% elif payment.status == 'PENDING' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">PENDING</span>
+                        {% elif payment.status == 'REVERSED' %}
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">REVERSED</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ payment.status }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-5 text-muted">Payroll Month/Year:</div>
+                    <div class="col-7 text-main">{{ month_names.get(payment.month, payment.month) }} {{ payment.year }}</div>
+
+                    <div class="col-5 text-muted">Voucher ID:</div>
+                    <div class="col-7 text-muted font-monospace">#{{ payment.id }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Amount Disbursed Callout Banner (INR ₹) -->
+    <div class="p-4 rounded-3 bg-success-subtle border border-success-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+        <div>
+            <span class="text-success text-uppercase fw-bold fs-xs tracking-wider d-block">Amount Paid &amp; Settled</span>
+            <span class="text-muted small">Total compensation credited to employee</span>
+        </div>
+        <div class="text-sm-end">
+            <span class="h1 fw-extrabold text-success mb-0 font-monospace" id="voucherAmount">
+                {{ payment.amount_paid|inr }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Audit Remarks & Notes -->
+    <div class="p-3 bg-light rounded-3 border small">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-bold text-muted text-uppercase fs-xs">Disbursement Memo &amp; Audit Trail</span>
+            <span class="text-muted fs-xs">Recorded: {{ payment.created_at }} &bull; Updated: {{ payment.updated_at }}</span>
+        </div>
+        <div class="text-main fst-italic">
+            {{ payment.transaction_notes or 'Standard compensation disbursement voucher.' }}
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Reverse Payment -->
+{% if payment.status == 'SUCCESSFUL' %}
+<div class="modal fade" id="reversePaymentModal" tabindex="-1" aria-labelledby="reverseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('payments.update_status', payment_id=payment.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="reverse">
+
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="reverseModalLabel">
+                        <i class="bi bi-exclamation-triangle text-danger me-2"></i>
+                        Reverse Payment Disbursement
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">
+                        Reversing transaction <strong>{{ payment.payment_reference }}</strong> marks the payment voucher as <code>REVERSED</code> 
+                        and rolls back the linked payroll statement from <code>PAID</code> back to <code>APPROVED</code>.
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="inputReverseReason" class="form-label fw-semibold small">Audit Reversal Reason <span class="text-danger">*</span></label>
+                        <textarea 
+                            name="reason" 
+                            id="inputReverseReason" 
+                            class="form-control" 
+                            rows="3" 
+                            required 
+                            placeholder="e.g. Bank ACH batch rejected due to invalid account number per bank notification..."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger" id="btnConfirmReverse">
+                        Confirm Reversal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

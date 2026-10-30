@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Directory | PayMaster Pro{% endblock %}
+
+{% block header_title %}Employee Management{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-people-fill me-1"></i> Module 3 Active
+            </span>
+            <span class="text-muted small">&bull; Directory Ledger</span>
+        </div>
+        <h2 class="fw-extrabold text-main mb-0">Employee Directory</h2>
+        <p class="text-muted small mb-0">
+            Manage organizational staff profiles, job assignments, employment status, and base compensation.
+        </p>
+    </div>
+
+    <div>
+        <a href="{{ url_for('employees.add') }}" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnAddEmployee">
+            <i class="bi bi-person-plus-fill"></i> Add New Employee
+        </a>
+    </div>
+</div>
+
+<!-- Search & Filtering Toolbar -->
+<div class="glass-card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('employees.index') }}" class="row g-2 align-items-center" id="employeeSearchForm">
+        <!-- Search Input -->
+        <div class="col-md-5 col-lg-5">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-body-tertiary border-color text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input 
+                    type="text" 
+                    name="search" 
+                    class="form-control" 
+                    placeholder="Search by code (EMP001), name, email, or dept..." 
+                    value="{{ search_query }}"
+                    id="employeeSearchInput"
+                >
+            </div>
+        </div>
+
+        <!-- Department Filter -->
+        <div class="col-sm-6 col-md-3 col-lg-3">
+            <select name="department" class="form-select form-select-sm" onchange="this.form.submit()" id="departmentFilterSelect">
+                <option value="ALL" {% if department_filter == 'ALL' %}selected{% endif %}>All Departments</option>
+                {% for dept in departments %}
+                    <option value="{{ dept }}" {% if department_filter == dept %}selected{% endif %}>{{ dept }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="col-sm-6 col-md-2 col-lg-2">
+            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" id="statusFilterSelect">
+                <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>All Statuses</option>
+                <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Active Only</option>
+                <option value="INACTIVE" {% if status_filter == 'INACTIVE' %}selected{% endif %}>Inactive Only</option>
+            </select>
+        </div>
+
+        <!-- Submit & Reset Buttons -->
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-secondary btn-sm d-inline-flex align-items-center gap-1">
+                <i class="bi bi-filter"></i> Filter
+            </button>
+            {% if search_query or (status_filter and status_filter != 'ALL') or (department_filter and department_filter != 'ALL') %}
+                <a href="{{ url_for('employees.index') }}" class="btn btn-outline-secondary btn-sm" title="Clear Filters">
+                    <i class="bi bi-x-circle"></i> Clear
+                </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Employees Data Table -->
+<div class="glass-card p-0 mb-4 overflow-hidden shadow-sm">
+    <div class="p-3 border-bottom border-color d-flex justify-content-between align-items-center">
+        <div class="fw-bold text-main">
+            <i class="bi bi-table text-primary me-2"></i> Employee Records
+            <span class="badge bg-secondary-subtle text-secondary rounded-pill ms-2 font-mono">
+                {{ total_count }} total
+            </span>
+        </div>
+        <div class="text-muted small">
+            Page {{ page }} of {{ total_pages }}
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table custom-table table-hover align-middle mb-0" id="employeesTable">
+            <thead>
+                <tr>
+                    <th>Emp Code</th>
+                    <th>Full Name</th>
+                    <th>Department & Title</th>
+                    <th>Contact Info</th>
+                    <th>Joining Date</th>
+                    <th>Base Salary</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if employees %}
+                    {% for emp in employees %}
+                    <tr>
+                        <!-- Employee Code -->
+                        <td>
+                            <a href="{{ url_for('employees.view', employee_id=emp.id) }}" class="fw-bold font-mono text-decoration-none text-primary">
+                                {{ emp.employee_code }}
+                            </a>
+                        </td>
+
+                        <!-- Full Name -->
+                        <td>
+                            <div class="fw-bold text-main">
+                                <a href="{{ url_for('employees.view', employee_id=emp.id) }}" class="text-decoration-none text-main">
+                                    {{ emp.first_name }} {{ emp.last_name }}
+                                </a>
+                            </div>
+                        </td>
+
+                        <!-- Department & Designation -->
+                        <td>
+                            <div class="text-main fw-semibold small">{{ emp.department }}</div>
+                            <div class="text-muted small">{{ emp.designation }}</div>
+                        </td>
+
+                        <!-- Contact -->
+                        <td class="small">
+                            <div><i class="bi bi-envelope text-muted me-1"></i> {{ emp.email }}</div>
+                            {% if emp.phone %}
+                                <div class="text-muted"><i class="bi bi-telephone text-muted me-1"></i> {{ emp.phone }}</div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Joining Date -->
+                        <td class="small text-muted font-mono">
+                            {{ emp.joining_date }}
+                        </td>
+
+                        <!-- Base Salary -->
+                        <td class="font-mono fw-bold text-success">
+                            ${{ "{:,.2f}".format(emp.base_salary) }}
+                        </td>
+
+                        <!-- Employment Status -->
+                        <td>
+                            {% if emp.status == 'ACTIVE' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <span class="status-dot d-inline-block me-1" style="width: 6px; height: 6px; background-color: #10b981;"></span> ACTIVE
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary border">
+                                    INACTIVE
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions Dropdown / Buttons -->
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a href="{{ url_for('employees.view', employee_id=emp.id) }}" class="btn btn-outline-secondary btn-sm p-1 px-2" title="View Profile">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('employees.edit', employee_id=emp.id) }}" class="btn btn-outline-primary btn-sm p-1 px-2" title="Edit Profile">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                {% if emp.status == 'ACTIVE' %}
+                                    <!-- Deactivate Trigger Button -->
+                                    <button 
+                                        type="button" 
+                                        class="btn btn-outline-warning btn-sm p-1 px-2" 
+                                        title="Deactivate Employee"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deactivateModal{{ emp.id }}"
+                                    >
+                                        <i class="bi bi-person-slash"></i>
+                                    </button>
+                                {% else %}
+                                    <!-- Reactivate Trigger Button -->
+                                    <button 
+                                        type="button" 
+                                        class="btn btn-outline-success btn-sm p-1 px-2" 
+                                        title="Reactivate Employee"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#reactivateModal{{ emp.id }}"
+                                    >
+                                        <i class="bi bi-person-check"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+
+                            <!-- Deactivation Confirmation Modal -->
+                            {% if emp.status == 'ACTIVE' %}
+                            <div class="modal fade" id="deactivateModal{{ emp.id }}" tabindex="-1" aria-labelledby="deactivateModalLabel{{ emp.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content glass-card">
+                                        <div class="modal-header border-color">
+                                            <h5 class="modal-title fw-bold text-warning" id="deactivateModalLabel{{ emp.id }}">
+                                                <i class="bi bi-exclamation-triangle-fill me-2"></i> Confirm Deactivation
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-start">
+                                            <p class="text-main mb-2">
+                                                Are you sure you want to deactivate <strong>{{ emp.first_name }} {{ emp.last_name }}</strong> (<code>{{ emp.employee_code }}</code>)?
+                                            </p>
+                                            <div class="alert alert-info py-2 small mb-0">
+                                                <i class="bi bi-shield-check me-1"></i> Historical payroll, attendance, and disbursement records will be <strong>100% preserved</strong>.
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer border-color">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{{ url_for('employees.deactivate', employee_id=emp.id) }}" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-warning btn-sm">Confirm Deactivate</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Reactivation Confirmation Modal -->
+                            {% if emp.status != 'ACTIVE' %}
+                            <div class="modal fade" id="reactivateModal{{ emp.id }}" tabindex="-1" aria-labelledby="reactivateModalLabel{{ emp.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content glass-card">
+                                        <div class="modal-header border-color">
+                                            <h5 class="modal-title fw-bold text-success" id="reactivateModalLabel{{ emp.id }}">
+                                                <i class="bi bi-person-check-fill me-2"></i> Reactivate Employee
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-start">
+                                            <p class="text-main mb-0">
+                                                Reactivate <strong>{{ emp.first_name }} {{ emp.last_name }}</strong> (<code>{{ emp.employee_code }}</code>) to active payroll calculations?
+                                            </p>
+                                        </div>
+                                        <div class="modal-footer border-color">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{{ url_for('employees.reactivate', employee_id=emp.id) }}" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-success btn-sm">Reactivate Employee</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-people display-4 d-block mb-2 text-muted"></i>
+                            <h6 class="fw-bold text-main mb-1">No Employees Found</h6>
+                            <p class="small text-muted mb-3">
+                                {% if search_query or status_filter != 'ALL' or department_filter != 'ALL' %}
+                                    No records match your active search filter.
+                                {% else %}
+                                    The employee registry is currently empty.
+                                {% endif %}
+                            </p>
+                            <a href="{{ url_for('employees.add') }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-person-plus me-1"></i> Add First Employee
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    {% if total_pages > 1 %}
+    <div class="p-3 border-top border-color d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+        <div class="text-muted small">
+            Showing {{ ((page - 1) * per_page) + 1 }} to {{ [page * per_page, total_count]|min }} of {{ total_count }} employees
+        </div>
+        <nav aria-label="Employee directory pagination">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('employees.index', page=page-1, search=search_query, status=status_filter, department=department_filter) }}" aria-label="Previous">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page or (p >= page - 2 and p <= page + 2) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('employees.index', page=p, search=search_query, status=status_filter, department=department_filter) }}">{{ p }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('employees.index', page=page+1, search=search_query, status=status_filter, department=department_filter) }}" aria-label="Next">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

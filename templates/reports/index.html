@@ -1,0 +1,612 @@
+{% extends "base.html" %}
+
+{% block title %}Financial &amp; Statutory Reports | PayMaster Pro{% endblock %}
+
+{% block header_title %}Analytics &amp; Statutory Reports{% endblock %}
+
+{% block content %}
+<!-- Page Header & Action Bar -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-file-earmark-bar-graph me-1"></i> Module 8 Active
+            </span>
+            <span class="text-muted small">&bull; Relational Analytics &amp; Reporting Engine</span>
+        </div>
+        <h1 class="h2 fw-extrabold text-main mb-0">Financial &amp; Statutory Reports</h1>
+        <p class="text-muted small mb-0">
+            Real-time MySQL aggregations, cross-table analytical joins, attendance audits, and downloadable CSV registers.
+        </p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('reports.dbms_docs') }}" class="btn btn-outline-primary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnDBMSDocs">
+            <i class="bi bi-diagram-2-fill"></i> DBMS Academic Docs
+        </a>
+
+        <!-- Export Dropdown -->
+        <div class="dropdown">
+            <button class="btn btn-primary px-3 py-2 rounded-3 shadow-sm dropdown-toggle d-inline-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="btnExportMenu">
+                <i class="bi bi-download"></i> Export Data (CSV)
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-color">
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2" href="{{ url_for('reports.export_payroll_csv', year=selected_year, month=selected_month, department=selected_department) }}">
+                        <i class="bi bi-file-earmark-spreadsheet text-success"></i> Monthly Payroll Register
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2" href="{{ url_for('reports.export_attendance_csv', year=selected_year, month=selected_month, department=selected_department) }}">
+                        <i class="bi bi-calendar-check text-primary"></i> Attendance Summary
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2" href="{{ url_for('reports.export_payments_csv', year=selected_year, month=selected_month) }}">
+                        <i class="bi bi-bank text-warning"></i> Payment History
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2" href="{{ url_for('reports.export_departments_csv') }}">
+                        <i class="bi bi-building text-info"></i> Department Workforce Summary
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Multi-Dimensional Filter Toolbar -->
+<div class="glass-card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('reports.index') }}" class="row g-2 align-items-center" id="reportsFilterForm">
+        <input type="hidden" name="tab" value="{{ active_tab }}">
+
+        <!-- Month Filter -->
+        <div class="col-sm-6 col-md-3 col-lg-2">
+            <select name="month" class="form-select form-select-sm" id="reportMonthSelect">
+                <option value="">All Months</option>
+                {% for m_num, m_name in month_names.items() %}
+                    <option value="{{ m_num }}" {% if selected_month == m_num %}selected{% endif %}>{{ m_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Year Filter -->
+        <div class="col-sm-6 col-md-3 col-lg-2">
+            <select name="year" class="form-select form-select-sm" id="reportYearSelect">
+                <option value="">All Years</option>
+                {% for yr in available_years %}
+                    <option value="{{ yr }}" {% if selected_year == yr %}selected{% endif %}>{{ yr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Department Filter -->
+        <div class="col-sm-6 col-md-3 col-lg-3">
+            <select name="department" class="form-select form-select-sm" id="reportDeptSelect">
+                <option value="ALL" {% if selected_department == 'ALL' %}selected{% endif %}>All Departments</option>
+                {% for dept in departments %}
+                    <option value="{{ dept }}" {% if selected_department == dept %}selected{% endif %}>{{ dept }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Employee Filter (for history/attendance) -->
+        <div class="col-sm-6 col-md-3 col-lg-3">
+            <select name="employee_id" class="form-select form-select-sm" id="reportEmployeeSelect">
+                <option value="">All Employees</option>
+                {% for emp in active_employees %}
+                    <option value="{{ emp.id }}" {% if selected_employee_id == emp.id %}selected{% endif %}>
+                        {{ emp.first_name }} {{ emp.last_name }} ({{ emp.employee_code }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm px-3" id="btnApplyReportFilter">
+                <i class="bi bi-funnel me-1"></i> Apply
+            </button>
+            {% if selected_month or selected_year or selected_department != 'ALL' or selected_employee_id %}
+            <a href="{{ url_for('reports.index', tab=active_tab) }}" class="btn btn-outline-secondary btn-sm" id="btnResetReportFilter" title="Reset Filters">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Navigation Tabs -->
+<ul class="nav nav-pills nav-fill gap-2 p-1 small bg-body-tertiary rounded-3 border mb-4" id="reportTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link rounded-2 py-2 fw-semibold {% if active_tab == 'payroll' %}active{% endif %}" href="{{ url_for('reports.index', tab='payroll', year=selected_year, month=selected_month, department=selected_department) }}">
+            <i class="bi bi-cash-stack me-1"></i> 1. Monthly Payroll Summary
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link rounded-2 py-2 fw-semibold {% if active_tab == 'attendance' %}active{% endif %}" href="{{ url_for('reports.index', tab='attendance', year=selected_year, month=selected_month, department=selected_department, employee_id=selected_employee_id) }}">
+            <i class="bi bi-calendar-check me-1"></i> 2. Attendance &amp; Leave
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link rounded-2 py-2 fw-semibold {% if active_tab == 'salary_history' %}active{% endif %}" href="{{ url_for('reports.index', tab='salary_history', year=selected_year, department=selected_department, employee_id=selected_employee_id) }}">
+            <i class="bi bi-clock-history me-1"></i> 3. Employee Salary History
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link rounded-2 py-2 fw-semibold {% if active_tab == 'status' %}active{% endif %}" href="{{ url_for('reports.index', tab='status', year=selected_year, month=selected_month) }}">
+            <i class="bi bi-pie-chart me-1"></i> 4. Status &amp; Methods
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link rounded-2 py-2 fw-semibold {% if active_tab == 'departments' %}active{% endif %}" href="{{ url_for('reports.index', tab='departments') }}">
+            <i class="bi bi-building me-1"></i> 5. Department Breakdown
+        </a>
+    </li>
+</ul>
+
+<!-- ========================================================================= -->
+<!-- TAB 1: MONTHLY PAYROLL SUMMARY -->
+<!-- ========================================================================= -->
+{% if active_tab == 'payroll' %}
+<div class="row g-3 mb-4" id="payrollSummaryKpis">
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-primary">
+            <span class="text-muted small fw-semibold text-uppercase">Total Gross Payroll</span>
+            <h3 class="fw-bold mb-1 text-main" id="statGross">{{ payroll_summary.total_gross|inr }}</h3>
+            <span class="text-muted fs-xs">Basic + Allowances + Overtime</span>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-danger">
+            <span class="text-muted small fw-semibold text-uppercase">Total Deductions</span>
+            <h3 class="fw-bold mb-1 text-danger" id="statDeductions">-{{ payroll_summary.total_deductions|inr }}</h3>
+            <span class="text-muted fs-xs">Leave: {{ payroll_summary.total_leave_deductions|inr }}</span>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-success">
+            <span class="text-muted small fw-semibold text-uppercase">Net Take-Home Disbursed</span>
+            <h3 class="fw-bold mb-1 text-success" id="statNet">{{ payroll_summary.total_net|inr }}</h3>
+            <span class="text-muted fs-xs">Avg. Net: {{ payroll_summary.avg_net_pay|inr }}</span>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-info">
+            <span class="text-muted small fw-semibold text-uppercase">Total Statements</span>
+            <h3 class="fw-bold mb-1 text-main" id="statStatements">{{ payroll_summary.total_statements }}</h3>
+            <span class="text-muted fs-xs">{{ payroll_summary.paid_count }} Paid &bull; {{ payroll_summary.approved_count }} Approved</span>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Payroll Breakdown Table Card -->
+<div class="glass-card shadow-sm p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-main mb-0">
+            <i class="bi bi-table text-primary me-2"></i> Payroll Aggregates Breakdown
+        </h5>
+        <a href="{{ url_for('reports.export_payroll_csv', year=selected_year, month=selected_month, department=selected_department) }}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-arrow-down me-1"></i> Export Payroll Register (CSV)
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Component Category</th>
+                    <th class="text-end">Aggregate Amount (INR)</th>
+                    <th>Analytical Significance &amp; Relational Derivation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="fw-semibold text-main">Fixed Base Pay Subtotal</td>
+                    <td class="text-end fw-bold font-monospace">{{ payroll_summary.total_basic|inr }}</td>
+                    <td class="text-muted small"><code>SUM(basic_pay)</code> &bull; Base compensation commitment snapshot</td>
+                </tr>
+                <tr>
+                    <td class="fw-semibold text-success">Monthly Allowances Pool</td>
+                    <td class="text-end fw-bold font-monospace text-success">+{{ payroll_summary.total_allowances|inr }}</td>
+                    <td class="text-muted small"><code>SUM(allowances_total)</code> &bull; HRA, transport, medical allowances</td>
+                </tr>
+                <tr>
+                    <td class="fw-semibold text-success">Overtime Remuneration</td>
+                    <td class="text-end fw-bold font-monospace text-success">+{{ payroll_summary.total_overtime|inr }}</td>
+                    <td class="text-muted small"><code>SUM(overtime_pay)</code> &bull; Hours multiplied by effective rate</td>
+                </tr>
+                <tr class="table-light fw-bold">
+                    <td class="text-main">Total Gross Compensation</td>
+                    <td class="text-end font-monospace text-main fs-6">{{ payroll_summary.total_gross|inr }}</td>
+                    <td class="text-muted small"><code>SUM(gross_pay)</code> = Basic + Allowances + Overtime</td>
+                </tr>
+                <tr>
+                    <td class="fw-semibold text-danger">Unpaid Leave Recoveries</td>
+                    <td class="text-end fw-bold font-monospace text-danger">-{{ payroll_summary.total_leave_deductions|inr }}</td>
+                    <td class="text-muted small"><code>SUM(leave_deduction)</code> &bull; Days LWP &times; (Basic / Working Days)</td>
+                </tr>
+                <tr>
+                    <td class="fw-semibold text-danger">Other Configured Deductions</td>
+                    <td class="text-end fw-bold font-monospace text-danger">-{{ payroll_summary.total_other_deductions|inr }}</td>
+                    <td class="text-muted small"><code>SUM(other_deductions)</code> &bull; Standard monthly deductions</td>
+                </tr>
+                <tr class="table-light fw-bold">
+                    <td class="text-danger">Total System Deductions</td>
+                    <td class="text-end font-monospace text-danger fs-6">-{{ payroll_summary.total_deductions|inr }}</td>
+                    <td class="text-muted small"><code>SUM(total_deductions)</code> = Leave + Other deductions</td>
+                </tr>
+                <tr class="table-success bg-opacity-25 fw-extrabold">
+                    <td class="text-success fs-6">Official Net Take-Home Salary</td>
+                    <td class="text-end font-monospace text-success fs-5">{{ payroll_summary.total_net|inr }}</td>
+                    <td class="text-main small"><code>SUM(net_pay)</code> = Gross Salary minus Total Deductions</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- ========================================================================= -->
+<!-- TAB 2: ATTENDANCE & LEAVE ANALYTICS -->
+<!-- ========================================================================= -->
+{% if active_tab == 'attendance' %}
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-primary">
+            <span class="text-muted small fw-semibold text-uppercase">Total Working Days</span>
+            <h3 class="fw-bold mb-1 text-main">{{ att_totals.total_working_days }}</h3>
+            <span class="text-muted fs-xs">Aggregated working days pool</span>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-success">
+            <span class="text-muted small fw-semibold text-uppercase">Days Worked Logged</span>
+            <h3 class="fw-bold mb-1 text-success">{{ att_totals.total_days_worked }}</h3>
+            <span class="text-muted fs-xs">Avg: {{ att_totals.avg_days_worked }} days/staff</span>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-danger">
+            <span class="text-muted small fw-semibold text-uppercase">Unpaid Leaves (LWP)</span>
+            <h3 class="fw-bold mb-1 text-danger">{{ att_totals.total_unpaid_leaves }}</h3>
+            <span class="text-muted fs-xs">Subject to salary deduction</span>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-warning">
+            <span class="text-muted small fw-semibold text-uppercase">Overtime Hours</span>
+            <h3 class="fw-bold mb-1 text-warning">{{ att_totals.total_overtime_hours }} hrs</h3>
+            <span class="text-muted fs-xs">Approved extra hours</span>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Ledger Table -->
+<div class="glass-card shadow-sm overflow-hidden mb-4">
+    <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold text-main mb-0">
+            <i class="bi bi-calendar-check text-primary me-2"></i> Attendance &amp; Leave Reconciliation
+        </h5>
+        <a href="{{ url_for('reports.export_attendance_csv', year=selected_year, month=selected_month, department=selected_department) }}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-download me-1"></i> Export Attendance (CSV)
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th scope="col" class="ps-4">Employee</th>
+                    <th scope="col" class="text-center">Period</th>
+                    <th scope="col" class="text-center">Working Days</th>
+                    <th scope="col" class="text-center">Days Worked</th>
+                    <th scope="col" class="text-center">Paid Leaves</th>
+                    <th scope="col" class="text-center">Unpaid Leaves (LWP)</th>
+                    <th scope="col" class="text-center">Overtime Hours</th>
+                    <th scope="col" class="text-end pe-4">OT Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if att_rows %}
+                    {% for row in att_rows %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-semibold text-main">{{ row.full_name }}</div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary-subtle text-secondary fs-xs">{{ row.employee_code }}</span>
+                                <span class="text-muted fs-xs">{{ row.department }}</span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border">
+                                {{ month_names.get(row.month, row.month) }} {{ row.year }}
+                            </span>
+                        </td>
+                        <td class="text-center">{{ row.total_working_days }}</td>
+                        <td class="text-center fw-semibold text-success">{{ row.present_days }}</td>
+                        <td class="text-center">{{ row.paid_leaves }}</td>
+                        <td class="text-center">
+                            {% if row.unpaid_leaves > 0 %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                    {{ row.unpaid_leaves }} d
+                                </span>
+                            {% else %}
+                                <span class="text-muted fs-xs">0.0</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if row.overtime_hours > 0 %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                    {{ row.overtime_hours }} hrs
+                                </span>
+                            {% else %}
+                                <span class="text-muted fs-xs">&mdash;</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4 font-monospace">{{ row.overtime_rate|inr }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            No attendance records match your filter criteria.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- ========================================================================= -->
+<!-- TAB 3: EMPLOYEE SALARY HISTORY -->
+<!-- ========================================================================= -->
+{% if active_tab == 'salary_history' %}
+<div class="glass-card shadow-sm overflow-hidden mb-4">
+    <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold text-main mb-0">
+            <i class="bi bi-clock-history text-primary me-2"></i> Employee-wise Salary &amp; Disbursement History
+        </h5>
+        <a href="{{ url_for('reports.export_payroll_csv', year=selected_year, department=selected_department) }}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-download me-1"></i> Export History (CSV)
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th scope="col" class="ps-4">Employee</th>
+                    <th scope="col" class="text-center">Period</th>
+                    <th scope="col" class="text-end">Basic Pay</th>
+                    <th scope="col" class="text-end">Gross Pay</th>
+                    <th scope="col" class="text-end">Deductions</th>
+                    <th scope="col" class="text-end">Net Pay</th>
+                    <th scope="col" class="text-center">Payroll Status</th>
+                    <th scope="col" class="text-center">Disbursement</th>
+                    <th scope="col" class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if salary_history %}
+                    {% for row in salary_history %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-semibold text-main">{{ row.full_name }}</div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary-subtle text-secondary fs-xs">{{ row.employee_code }}</span>
+                                <span class="text-muted fs-xs">{{ row.payroll_code }}</span>
+                                <span class="text-muted fs-xs">&bull; {{ row.department }}</span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border">
+                                {{ month_names.get(row.month, row.month) }} {{ row.year }}
+                            </span>
+                        </td>
+                        <td class="text-end font-monospace">{{ row.basic_pay|inr }}</td>
+                        <td class="text-end font-monospace text-main fw-semibold">{{ row.gross_pay|inr }}</td>
+                        <td class="text-end font-monospace text-danger">-{{ row.total_deductions|inr }}</td>
+                        <td class="text-end font-monospace text-success fw-bold">{{ row.net_pay|inr }}</td>
+                        <td class="text-center">
+                            {% if row.payroll_status == 'PAID' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">PAID</span>
+                            {% elif row.payroll_status == 'APPROVED' %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">APPROVED</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">{{ row.payroll_status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if row.payment_reference %}
+                                <a href="{{ url_for('payments.index', search=row.payment_reference) }}" class="badge bg-light text-primary border font-monospace text-decoration-none">
+                                    {{ row.payment_reference }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted fs-xs">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="{{ url_for('payments.salary_slip', payroll_id=row.payroll_id or row.id) }}" class="btn btn-xs btn-outline-success">
+                                <i class="bi bi-file-earmark-text"></i> Slip
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            No salary history found matching your filters.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- ========================================================================= -->
+<!-- TAB 4: STATUS & METHOD DISTRIBUTIONS -->
+<!-- ========================================================================= -->
+{% if active_tab == 'status' %}
+<div class="row g-4 mb-4">
+    <!-- Payroll Status Distribution -->
+    <div class="col-lg-6">
+        <div class="glass-card shadow-sm p-4 h-100">
+            <h5 class="fw-bold text-main mb-3">
+                <i class="bi bi-pie-chart text-primary me-2"></i> Payroll Status Distribution
+            </h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Status</th>
+                            <th class="text-center">Count</th>
+                            <th class="text-end">Gross Total (INR)</th>
+                            <th class="text-end">Net Total (INR)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if status_distribution %}
+                            {% for st in status_distribution %}
+                            <tr>
+                                <td>
+                                    {% if st.status == 'PAID' %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">PAID</span>
+                                    {% elif st.status == 'APPROVED' %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">APPROVED</span>
+                                    {% elif st.status == 'DRAFT' %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">DRAFT</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary px-2 py-1">{{ st.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center fw-bold">{{ st.count }}</td>
+                                <td class="text-end font-monospace">{{ st.gross_total|inr }}</td>
+                                <td class="text-end font-monospace text-success fw-semibold">{{ st.net_total|inr }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No payroll status data.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Method Distribution -->
+    <div class="col-lg-6">
+        <div class="glass-card shadow-sm p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-main mb-0">
+                    <i class="bi bi-credit-card text-success me-2"></i> Payment Method Analytics
+                </h5>
+                <a href="{{ url_for('reports.export_payments_csv', year=selected_year, month=selected_month) }}" class="btn btn-outline-success btn-sm">
+                    <i class="bi bi-download"></i> CSV
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Method</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Transactions</th>
+                            <th class="text-end">Total Amount (INR)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if method_distribution %}
+                            {% for m in method_distribution %}
+                            <tr>
+                                <td class="fw-semibold text-main">{{ m.payment_method.replace('_', ' ').title() }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border">{{ m.payment_status }}</span>
+                                </td>
+                                <td class="text-center fw-bold">{{ m.transaction_count }}</td>
+                                <td class="text-end font-monospace text-success fw-bold">{{ m.total_amount|inr }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No payment transaction records for period.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ========================================================================= -->
+<!-- TAB 5: DEPARTMENT WORKFORCE ANALYTICS -->
+<!-- ========================================================================= -->
+{% if active_tab == 'departments' %}
+<div class="glass-card shadow-sm overflow-hidden mb-4">
+    <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold text-main mb-0">
+            <i class="bi bi-building text-primary me-2"></i> Department Headcount &amp; Compensation Commitment
+        </h5>
+        <a href="{{ url_for('reports.export_departments_csv') }}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-download me-1"></i> Export Departments (CSV)
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th scope="col" class="ps-4">Department</th>
+                    <th scope="col" class="text-center">Staff Count</th>
+                    <th scope="col" class="text-center">Active / Inactive</th>
+                    <th scope="col" class="text-end">Base Payroll Subtotal</th>
+                    <th scope="col" class="text-end">Average Base Salary</th>
+                    <th scope="col" class="text-end">Allowances Pool</th>
+                    <th scope="col" class="text-end pe-4">Salary Range (Min - Max)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if dept_summary %}
+                    {% for d in dept_summary %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-main">
+                            <i class="bi bi-folder2 text-secondary me-1"></i> {{ d.department }}
+                        </td>
+                        <td class="text-center fw-bold">{{ d.total_employees }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">{{ d.active_count }} Active</span>
+                            {% if d.inactive_count > 0 %}
+                            <span class="badge bg-secondary-subtle text-secondary">{{ d.inactive_count }} Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end font-monospace fw-semibold">{{ d.total_base_payroll|inr }}</td>
+                        <td class="text-end font-monospace text-primary fw-semibold">{{ d.avg_base_salary|inr }}</td>
+                        <td class="text-end font-monospace text-success">+{{ d.total_allowances_pool|inr }}</td>
+                        <td class="text-end pe-4 font-monospace small text-muted">
+                            {{ d.min_salary|inr }} &mdash; {{ d.max_salary|inr }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            No department data found.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

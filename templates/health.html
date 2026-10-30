@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}System Health Diagnostics | Employee Payroll Management System{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{{ url_for('core.index') }}" class="text-decoration-none">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Health Diagnostics</li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-0 text-main">System Health & Connectivity</h2>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-outline-primary d-inline-flex align-items-center gap-2" id="btn-recheck-health">
+            <i class="bi bi-arrow-clockwise"></i> Re-probe Status
+        </button>
+        <a href="{{ url_for('health.api_health') }}" target="_blank" class="btn btn-secondary d-inline-flex align-items-center gap-2">
+            <i class="bi bi-filetype-json"></i> Raw JSON
+        </a>
+    </div>
+</div>
+
+<!-- Health Summary Banner -->
+<div class="glass-card p-4 mb-4">
+    <div class="row g-4 align-items-center">
+        <div class="col-md-6">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 rounded-circle {% if health.status == 'healthy' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-warning{% endif %} fs-2">
+                    <i class="bi {% if health.status == 'healthy' %}bi-check-circle-fill{% else %}bi-exclamation-triangle-fill{% endif %}"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold text-uppercase">Overall Health Status</div>
+                    <h3 class="fw-bold mb-0 text-main">
+                        {% if health.status == 'healthy' %}
+                            System Fully Operational
+                        {% else %}
+                            System Online (Database Degraded)
+                        {% endif %}
+                    </h3>
+                    <div class="small text-muted mt-1">
+                        Probe timestamp: <span class="font-mono">{{ health.timestamp }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 text-md-end">
+            <div class="d-inline-flex flex-wrap gap-2">
+                <span class="status-pill status-online">
+                    <span class="status-dot"></span> Flask Web Server: Online
+                </span>
+                {% if health.database.connected %}
+                    <span class="status-pill status-online" id="live-db-badge">
+                        <span class="status-dot"></span> MySQL Database: Connected
+                    </span>
+                {% else %}
+                    <span class="status-pill status-offline" id="live-db-badge">
+                        <span class="status-dot"></span> MySQL Database: Disconnected
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Flask Subsystem Diagnostics -->
+    <div class="col-lg-6">
+        <div class="glass-card p-4 h-100">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <div class="p-2 rounded-2 bg-primary-subtle text-primary">
+                    <i class="bi bi-window-sidebar"></i>
+                </div>
+                <h5 class="fw-bold mb-0 text-main">Flask Application Subsystem</h5>
+            </div>
+
+            <ul class="list-group list-group-flush bg-transparent">
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Application Name</span>
+                    <span class="fw-semibold text-main">{{ health.flask.app_name }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Application Version</span>
+                    <span class="badge bg-secondary-subtle text-secondary font-mono">v{{ health.flask.version }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Active Module</span>
+                    <span class="fw-semibold text-main">{{ health.flask.module }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Debug Mode</span>
+                    <span class="badge {% if health.flask.debug %}bg-warning-subtle text-warning{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                        {{ 'Enabled' if health.flask.debug else 'Disabled' }}
+                    </span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Architecture Pattern</span>
+                    <span class="badge bg-primary-subtle text-primary">Application Factory Pattern</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- MySQL Database Subsystem Diagnostics -->
+    <div class="col-lg-6">
+        <div class="glass-card p-4 h-100">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <div class="p-2 rounded-2 bg-success-subtle text-success">
+                    <i class="bi bi-database-check"></i>
+                </div>
+                <h5 class="fw-bold mb-0 text-main">MySQL Database Subsystem</h5>
+            </div>
+
+            <ul class="list-group list-group-flush bg-transparent">
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Host & Port</span>
+                    <span class="font-mono text-main">{{ health.database.host }}:{{ health.database.port }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Target Database</span>
+                    <span class="font-mono text-primary fw-semibold">{{ health.database.database }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Database User</span>
+                    <span class="font-mono text-main">{{ health.database.user }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Server Version</span>
+                    <span class="badge bg-dark-subtle text-dark font-mono">
+                        {{ health.database.server_version or 'Not Available' }}
+                    </span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center border-color">
+                    <span class="text-muted">Connection Pool</span>
+                    <span class="badge {% if health.database.pool_active %}bg-success-subtle text-success{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                        {{ 'Active' if health.database.pool_active else 'Inactive' }}
+                    </span>
+                </li>
+            </ul>
+
+            <div class="mt-3 p-3 rounded-2 {% if health.database.connected %}bg-success-subtle border border-success-subtle text-success{% else %}bg-danger-subtle border border-danger-subtle text-danger{% endif %} small">
+                <strong>Probe Report:</strong>
+                <span id="live-db-message">{{ health.database.message }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Database Schema Verification Table -->
+{% if schema_status and schema_status.tables_found %}
+<div class="glass-card p-4 mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-main">
+            <i class="bi bi-shield-check text-success me-2"></i> Database Schema Verification
+        </h5>
+        <span class="badge bg-success-subtle text-success border border-success-subtle">
+            All 6 Required Tables Present
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table custom-table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Table Name</th>
+                    <th>Status</th>
+                    <th>Record Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for table, count in schema_status.table_counts.items() %}
+                <tr>
+                    <td><code class="text-primary">{{ table }}</code></td>
+                    <td>
+                        {% if count >= 0 %}
+                            <span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg me-1"></i> Table Verified</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger"><i class="bi bi-x-lg me-1"></i> Missing</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="font-mono fw-semibold">{{ count if count >= 0 else 'N/A' }} rows</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% elif not health.database.connected %}
+<!-- Troubleshooting Assistance When Database is Not Connected -->
+<div class="glass-card p-4 mt-4 border-warning">
+    <div class="d-flex align-items-center gap-2 mb-2 text-warning">
+        <i class="bi bi-info-circle-fill fs-5"></i>
+        <h5 class="fw-bold mb-0">How to Connect to MySQL on Windows</h5>
+    </div>
+    <p class="text-muted small mb-3">
+        Your Flask application is fully running. To establish connectivity with your local MySQL Server 8.0:
+    </p>
+    <ol class="small text-muted ps-3 mb-3">
+        <li class="mb-1">Create or update your <code>.env</code> file from <code>.env.example</code> with your MySQL root password.</li>
+        <li class="mb-1">Ensure the MySQL Windows Service (<code>MySQL80</code>) is running.</li>
+        <li class="mb-1">Run <code>flask init-db</code> to initialize the schema and populate sample seed records.</li>
+    </ol>
+</div>
+{% endif %}
+{% endblock %}

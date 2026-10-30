@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Record Payment Disbursement - {{ payroll.payroll_code }} | PayMaster Pro{% endblock %}
+
+{% block header_title %}Disbursement Voucher Recording{% endblock %}
+
+{% block content %}
+<!-- Academic Disclaimer Alert -->
+<div class="alert alert-warning border border-warning-subtle shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
+    <div class="p-2 bg-warning bg-opacity-25 rounded-circle text-warning d-flex align-items-center justify-content-center">
+        <i class="bi bi-info-circle-fill fs-4"></i>
+    </div>
+    <div class="small">
+        <strong class="text-main">Academic Demonstration Application:</strong>
+        <span class="text-muted ms-1">
+            This screen records payment details for simulated audit logging. 
+            <strong>No financial transaction or bank transfer is executed in reality.</strong>
+        </span>
+    </div>
+</div>
+
+<!-- Page Header & Navigation -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('payments.awaiting') }}" class="text-decoration-none text-muted small hover-primary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Awaiting Queue
+            </a>
+            <span class="text-muted small">&bull; Module 7 Recording</span>
+        </div>
+        <h1 class="h2 fw-extrabold text-main mb-0">Record Payment Disbursement</h1>
+        <p class="text-muted small mb-0">
+            Confirm disbursement details for approved statement <span class="font-monospace fw-bold text-primary">{{ payroll.payroll_code }}</span>.
+        </p>
+    </div>
+
+    <div>
+        <a href="{{ url_for('payroll.view', payroll_id=payroll.id) }}" class="btn btn-outline-secondary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+            <i class="bi bi-file-text"></i> View Statement Details
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Payment Form Column -->
+    <div class="col-lg-7">
+        <div class="glass-card p-4 shadow-sm h-100">
+            <h5 class="fw-bold text-main mb-3">
+                <i class="bi bi-credit-card-2-front text-primary me-2"></i> Disbursement Transaction Voucher
+            </h5>
+
+            <form method="POST" action="{{ url_for('payments.record_payment', payroll_id=payroll.id) }}" id="recordPaymentForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- Payment Reference -->
+                <div class="mb-3">
+                    <label for="inputReference" class="form-label fw-semibold text-main small">
+                        Transaction / Payment Reference <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text font-monospace bg-body-tertiary">#</span>
+                        <input 
+                            type="text" 
+                            name="payment_reference" 
+                            id="inputReference" 
+                            class="form-control font-monospace" 
+                            value="{{ default_reference }}" 
+                            required 
+                            placeholder="e.g. TXN-202610-EMP001-A1B2"
+                        >
+                    </div>
+                    <div class="form-text fs-xs text-muted">A unique transaction reference is strictly enforced to prevent duplicate disbursements.</div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <!-- Payment Date -->
+                    <div class="col-sm-6">
+                        <label for="inputPaymentDate" class="form-label fw-semibold text-main small">
+                            Payment Date <span class="text-danger">*</span>
+                        </label>
+                        <input 
+                            type="date" 
+                            name="payment_date" 
+                            id="inputPaymentDate" 
+                            class="form-control" 
+                            value="{{ today }}" 
+                            required
+                        >
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="col-sm-6">
+                        <label for="selectPaymentMethod" class="form-label fw-semibold text-main small">
+                            Payment Method <span class="text-danger">*</span>
+                        </label>
+                        <select name="payment_method" id="selectPaymentMethod" class="form-select" required>
+                            {% for method in payment_methods %}
+                                <option value="{{ method }}" {% if method == 'BANK_TRANSFER' %}selected{% endif %}>
+                                    {{ method.replace('_', ' ').title() }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <!-- Payment Amount (INR) -->
+                    <div class="col-sm-6">
+                        <label for="inputAmount" class="form-label fw-semibold text-main small">
+                            Disbursement Amount (INR ₹) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-body-tertiary">₹</span>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                min="0.01" 
+                                name="amount" 
+                                id="inputAmount" 
+                                class="form-control fw-bold text-success font-monospace" 
+                                value="{{ payroll.net_pay }}" 
+                                required
+                            >
+                        </div>
+                        <div class="form-text fs-xs text-muted">Must exactly match the approved net salary.</div>
+                    </div>
+
+                    <!-- Confirmation Status -->
+                    <div class="col-sm-6">
+                        <label for="selectStatus" class="form-label fw-semibold text-main small">
+                            Disbursement Status <span class="text-danger">*</span>
+                        </label>
+                        <select name="status" id="selectStatus" class="form-select" required>
+                            <option value="SUCCESSFUL" selected>Successful (Confirmed Paid)</option>
+                            <option value="PENDING">Pending (Authorization In-Flight)</option>
+                            <option value="FAILED">Failed (Transaction Rejected)</option>
+                        </select>
+                        <div class="form-text fs-xs text-muted">
+                            Only 'Successful' marks the payroll record as PAID.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction Memo / Notes -->
+                <div class="mb-4">
+                    <label for="inputNotes" class="form-label fw-semibold text-main small">Transaction Memo &amp; Audit Notes</label>
+                    <textarea 
+                        name="transaction_notes" 
+                        id="inputNotes" 
+                        class="form-control" 
+                        rows="3" 
+                        placeholder="e.g. Disbursed via corporate payroll ACH batch #4928..."
+                    ></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-primary w-100 py-2 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnConfirmPayment">
+                    <i class="bi bi-check-circle-fill"></i> Record Payment &amp; Update Ledger
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Approved Payroll Summary Column -->
+    <div class="col-lg-5">
+        <div class="glass-card p-4 shadow-sm h-100">
+            <h5 class="fw-bold text-main mb-3">
+                <i class="bi bi-file-earmark-check text-success me-2"></i> Statement Summary
+            </h5>
+
+            <div class="p-3 bg-body-tertiary rounded-3 border mb-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-secondary-subtle text-secondary font-monospace">{{ payroll.employee_code }}</span>
+                    <span class="fw-bold text-main">{{ payroll.full_name }}</span>
+                </div>
+                <div class="text-muted small">
+                    Department: <strong>{{ payroll.department }}</strong> &bull; Title: <strong>{{ payroll.designation }}</strong>
+                </div>
+                <div class="text-muted small">
+                    Payroll Period: <strong>{{ month_names.get(payroll.month, payroll.month) }} {{ payroll.year }}</strong>
+                </div>
+            </div>
+
+            <!-- Financial Totals (INR ₹) -->
+            <ul class="list-group list-group-flush mb-4 small">
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Basic Salary:</span>
+                    <span class="fw-semibold text-main">{{ payroll.basic_pay|inr }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Allowances Pool:</span>
+                    <span class="fw-semibold text-success">+{{ payroll.allowances_total|inr }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Overtime Compensation:</span>
+                    <span class="fw-semibold text-success">+{{ payroll.overtime_pay|inr }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center fw-bold border-top">
+                    <span class="text-main">Gross Pay:</span>
+                    <span class="text-main">{{ payroll.gross_pay|inr }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Unpaid Leave Deduction:</span>
+                    <span class="text-danger">-{{ payroll.leave_deduction|inr }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Other Standard Deductions:</span>
+                    <span class="text-danger">-{{ payroll.other_deductions|inr }}</span>
+                </li>
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center fw-bold border-top">
+                    <span class="text-danger">Total Deductions:</span>
+                    <span class="text-danger">-{{ payroll.total_deductions|inr }}</span>
+                </li>
+            </ul>
+
+            <!-- Net Payable Highlight (INR) -->
+            <div class="p-3 rounded-3 bg-success-subtle border border-success-subtle d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-success fw-bold text-uppercase fs-xs d-block">Approved Net Payable</span>
+                    <small class="text-muted">Final disbursement amount</small>
+                </div>
+                <div class="text-end">
+                    <span class="fs-4 fw-extrabold text-success font-monospace" id="displayNetPay">{{ payroll.net_pay|inr }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

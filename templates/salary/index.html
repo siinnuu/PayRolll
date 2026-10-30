@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Salary Configuration &amp; Grades | PayMaster Pro{% endblock %}
+
+{% block header_title %}Salary Settings &amp; Structures{% endblock %}
+
+{% block content %}
+<!-- Page Header & Action Bar -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-cash-coin me-1"></i> Module 5 Active
+            </span>
+            <span class="text-muted small">&bull; Compensation Architecture</span>
+        </div>
+        <h1 class="h2 fw-extrabold text-main mb-0">Salary Configuration</h1>
+        <p class="text-muted small mb-0">
+            Configure employee compensation structures, monthly allowances, overtime hourly rates, and deduction settings.
+        </p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('salary.preview') }}" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnSalaryPreview">
+            <i class="bi bi-calculator-fill"></i> Salary Preview Engine
+        </a>
+    </div>
+</div>
+
+<!-- Summary Analytics Cards -->
+<div class="row g-3 mb-4" id="salarySummaryCards">
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-primary">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Monthly Base Payroll</span>
+                <div class="p-2 bg-primary-subtle text-primary rounded-3">
+                    <i class="bi bi-cash-stack fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1 text-main" id="statBasePayroll">{{ summary.total_base_payroll|currency }}</h3>
+            <span class="text-muted fs-xs">Active staff fixed basic pay</span>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-success">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Avg. Basic Salary</span>
+                <div class="p-2 bg-success-subtle text-success rounded-3">
+                    <i class="bi bi-graph-up-arrow fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1 text-success" id="statAvgSalary">{{ summary.avg_base_salary|currency }}</h3>
+            <span class="text-muted fs-xs">Per employee benchmark</span>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-info">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Allowances Pool</span>
+                <div class="p-2 bg-info-subtle text-info rounded-3">
+                    <i class="bi bi-gift-fill fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1 text-info" id="statAllowancesPool">{{ summary.total_allowances_pool|currency }}</h3>
+            <span class="text-muted fs-xs">HRA, Transport, Medical, Other</span>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="glass-card p-3 h-100 shadow-sm border-start border-4 border-warning">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small fw-semibold text-uppercase">Configured Deductions</span>
+                <div class="p-2 bg-warning-subtle text-warning rounded-3">
+                    <i class="bi bi-dash-circle-dotted fs-5"></i>
+                </div>
+            </div>
+            <h3 class="fw-bold mb-1 text-main" id="statOtherDeductions">{{ summary.total_other_deductions|currency }}</h3>
+            <span class="text-muted fs-xs">Monthly standard deductions</span>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filtering Toolbar -->
+<div class="glass-card p-3 mb-4 shadow-sm">
+    <form method="GET" action="{{ url_for('salary.index') }}" class="row g-2 align-items-center" id="salaryFilterForm">
+        <div class="col-md-6 col-lg-6">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-body-tertiary border-color text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input 
+                    type="text" 
+                    name="search" 
+                    class="form-control" 
+                    placeholder="Search by code, employee name, or department..." 
+                    value="{{ search_query }}"
+                    id="salarySearchInput"
+                >
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-md-4 col-lg-4">
+            <select name="department" class="form-select form-select-sm" id="salaryDeptSelect" onchange="this.form.submit()">
+                <option value="ALL" {% if department_filter == 'ALL' %}selected{% endif %}>All Departments</option>
+                {% for dept in departments %}
+                    <option value="{{ dept }}" {% if department_filter == dept %}selected{% endif %}>{{ dept }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-auto d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm px-3" id="btnFilterSalary">
+                <i class="bi bi-funnel me-1"></i> Filter
+            </button>
+            {% if search_query or department_filter != 'ALL' %}
+            <a href="{{ url_for('salary.index') }}" class="btn btn-outline-secondary btn-sm" id="btnClearSalaryFilter" title="Reset Filters">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Salary Structures Table -->
+<div class="glass-card shadow-sm overflow-hidden mb-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="salaryTable">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th scope="col" class="ps-4">Employee</th>
+                    <th scope="col" class="text-end">Basic Monthly</th>
+                    <th scope="col" class="text-end">Allowances</th>
+                    <th scope="col" class="text-center">Overtime Rate</th>
+                    <th scope="col" class="text-end">Other Deductions</th>
+                    <th scope="col" class="text-center">Effective Date</th>
+                    <th scope="col" class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if structures %}
+                    {% for item in structures %}
+                    <tr id="row-salary-{{ item.employee_id }}">
+                        <!-- Employee Info -->
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-circle-sm bg-primary-subtle text-primary fw-bold">
+                                    {{ item.first_name[0] }}{{ item.last_name[0] }}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold text-main">
+                                        <a href="{{ url_for('salary.preview', employee_id=item.employee_id) }}" class="text-decoration-none text-main hover-primary">
+                                            {{ item.first_name }} {{ item.last_name }}
+                                        </a>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-secondary-subtle text-secondary fs-xs">{{ item.employee_code }}</span>
+                                        <span class="text-muted fs-xs">{{ item.department }} &bull; {{ item.designation }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Base Salary -->
+                        <td class="text-end">
+                            <div class="fw-bold text-main fs-6">{{ item.base_salary|currency }}</div>
+                            <span class="text-muted fs-xs">Base Pay</span>
+                        </td>
+
+                        <!-- Allowances Breakdown -->
+                        <td class="text-end">
+                            <div class="fw-semibold text-success">+{{ item.total_allowances|currency }}</div>
+                            <div class="text-muted fs-xs" title="HRA: {{ item.hra|currency }}, Transport: {{ item.transport_allowance|currency }}, Medical: {{ item.medical_allowance|currency }}, Other: {{ item.other_allowances|currency }}">
+                                HRA: {{ item.hra|currency }}
+                            </div>
+                        </td>
+
+                        <!-- Overtime Hourly Rate -->
+                        <td class="text-center">
+                            {% if item.hourly_rate > 0 %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                    {{ item.hourly_rate|currency }} / hr
+                                </span>
+                            {% else %}
+                                <span class="text-muted fs-xs">&mdash;</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Other Deductions -->
+                        <td class="text-end">
+                            {% if item.other_deductions > 0 %}
+                                <span class="text-danger fw-semibold">-{{ item.other_deductions|currency }}</span>
+                            {% else %}
+                                <span class="text-muted fs-xs">$0.00</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Effective From -->
+                        <td class="text-center text-muted small">
+                            {{ item.effective_from or '&mdash;' }}
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="text-end pe-4">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('salary.edit', employee_id=item.employee_id) }}" class="btn btn-outline-primary" title="Configure Salary Structure" id="btnEditSalary-{{ item.employee_id }}">
+                                    <i class="bi bi-pencil-square me-1"></i> Edit
+                                </a>
+                                <a href="{{ url_for('salary.preview', employee_id=item.employee_id) }}" class="btn btn-outline-success" title="Preview Calculation" id="btnPreview-{{ item.employee_id }}">
+                                    <i class="bi bi-calculator"></i> Preview
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-cash-coin fs-2 d-block mb-2 text-secondary"></i>
+                            No salary structures found matching your criteria.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    {% if total_count > 0 %}
+    <div class="p-3 border-top d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+        <div class="text-muted small">
+            Showing <strong>{{ ((page - 1) * per_page) + 1 }}</strong> to 
+            <strong>{{ (page * per_page) if (page * per_page) < total_count else total_count }}</strong> of 
+            <strong>{{ total_count }}</strong> compensation profiles
+        </div>
+
+        {% if total_pages > 1 %}
+        <nav aria-label="Salary configuration pagination">
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('salary.index', page=page-1, search=search_query, department=department_filter) }}">
+                        &laquo; Prev
+                    </a>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('salary.index', page=p, search=search_query, department=department_filter) }}">
+                            {{ p }}
+                        </a>
+                    </li>
+                {% endfor %}
+                <li class="page-item {% if not has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('salary.index', page=page+1, search=search_query, department=department_filter) }}">
+                        Next &raquo;
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

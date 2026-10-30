@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Salary Slip - {{ payroll.payroll_code }} | PayMaster Pro{% endblock %}
+
+{% block header_title %}Official Salary Slip{% endblock %}
+
+{% block content %}
+<!-- Academic Disclaimer Notice (screen only) -->
+<div class="alert alert-warning border border-warning-subtle shadow-sm d-flex align-items-center gap-3 mb-4 d-print-none" role="alert">
+    <div class="p-2 bg-warning bg-opacity-25 rounded-circle text-warning d-flex align-items-center justify-content-center">
+        <i class="bi bi-info-circle-fill fs-4"></i>
+    </div>
+    <div class="small">
+        <strong class="text-main">Academic Demonstration Application:</strong>
+        <span class="text-muted ms-1">
+            This salary slip is an educational simulation document. 
+            <strong>No actual financial transaction or bank transfer has occurred.</strong>
+        </span>
+    </div>
+</div>
+
+<!-- Page Header & Action Controls (screen only) -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 d-print-none">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="{{ url_for('payments.index') }}" class="text-decoration-none text-muted small hover-primary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Payments
+            </a>
+            <span class="text-muted small">&bull; Salary Slip Statement</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <h1 class="h2 fw-extrabold text-main mb-0 font-monospace">{{ payroll.payroll_code }}</h1>
+            {% if payroll.status == 'PAID' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-patch-check-fill me-1"></i> Paid &amp; Settled
+                </span>
+            {% elif payroll.status == 'APPROVED' %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 fs-6">
+                    <i class="bi bi-check2-circle me-1"></i> Approved (Awaiting Payment)
+                </span>
+            {% else %}
+                <span class="badge bg-secondary-subtle text-secondary px-3 py-1 fs-6">
+                    {{ payroll.status }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" onclick="window.print()" id="btnPrintSalarySlip">
+            <i class="bi bi-printer me-1"></i> Print Salary Slip
+        </button>
+        <a href="{{ url_for('payments.download_slip_pdf', payroll_id=payroll.id) }}" class="btn btn-primary px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="btnDownloadPDF">
+            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download PDF
+        </a>
+    </div>
+</div>
+
+<!-- Formal Printable Salary Slip Document Card -->
+<div class="glass-card shadow-lg p-4 p-md-5 mb-4" id="printableSalarySlipDoc">
+    <!-- Academic Watermark Header -->
+    <div class="text-center py-1 px-3 bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-2 mb-4 small fw-bold tracking-wider text-uppercase">
+        Academic Demonstration Record &bull; No Real Money Was Transferred
+    </div>
+
+    <!-- Corporate Header -->
+    <div class="row align-items-center pb-4 mb-4 border-bottom">
+        <div class="col-sm-7">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="p-2 rounded-3 bg-primary text-white d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-cash-stack fs-4"></i>
+                </div>
+                <div>
+                    <h3 class="fw-extrabold text-main mb-0 tracking-tight">PayMaster Pro</h3>
+                    <span class="text-muted fs-xs">Enterprise Payroll &amp; Human Resources Management</span>
+                </div>
+            </div>
+            <p class="text-muted small mb-0">
+                Official Monthly Salary Slip &bull; Confidential Document
+            </p>
+        </div>
+
+        <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
+            <div class="p-3 bg-body-tertiary rounded-3 border d-inline-block text-start">
+                <div class="text-muted fs-xs text-uppercase fw-semibold">Payslip Reference</div>
+                <div class="font-monospace fw-bold text-primary">{{ payroll.payroll_code }}</div>
+                <div class="text-muted fs-xs mt-1">Period: <strong>{{ month_name }} {{ year }}</strong></div>
+                <div class="text-muted fs-xs">Status: <strong>{{ payroll.status }}</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee & Attendance Grid -->
+    <div class="row g-4 mb-4">
+        <!-- Employee Details -->
+        <div class="col-md-6">
+            <div class="p-3 bg-body-tertiary rounded-3 border h-100">
+                <h6 class="fw-bold text-uppercase text-muted fs-xs mb-3 border-bottom pb-2">
+                    <i class="bi bi-person me-1"></i> Employee Details
+                </h6>
+                <div class="row g-2 small">
+                    <div class="col-4 text-muted">Full Name:</div>
+                    <div class="col-8 fw-semibold text-main">{{ employee.first_name }} {{ employee.last_name }}</div>
+
+                    <div class="col-4 text-muted">Employee Code:</div>
+                    <div class="col-8 font-monospace fw-semibold">{{ employee.employee_code }}</div>
+
+                    <div class="col-4 text-muted">Department:</div>
+                    <div class="col-8 text-main">{{ employee.department }}</div>
+
+                    <div class="col-4 text-muted">Designation:</div>
+                    <div class="col-8 text-main">{{ employee.designation }}</div>
+
+                    <div class="col-4 text-muted">Joining Date:</div>
+                    <div class="col-8 text-muted">{{ employee.joining_date }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Summary -->
+        <div class="col-md-6">
+            <div class="p-3 bg-body-tertiary rounded-3 border h-100">
+                <h6 class="fw-bold text-uppercase text-muted fs-xs mb-3 border-bottom pb-2">
+                    <i class="bi bi-calendar-check me-1"></i> Attendance Reconciliation
+                </h6>
+                {% if attendance %}
+                <div class="row g-2 small">
+                    <div class="col-6 text-muted">Total Working Days:</div>
+                    <div class="col-6 fw-semibold text-main">{{ attendance.total_working_days }} days</div>
+
+                    <div class="col-6 text-muted">Days Worked:</div>
+                    <div class="col-6 fw-semibold text-success">{{ attendance.days_worked }} days</div>
+
+                    <div class="col-6 text-muted">Paid Leave Days:</div>
+                    <div class="col-6 fw-semibold text-info">{{ attendance.paid_leave_days }} days</div>
+
+                    <div class="col-6 text-muted">Unpaid Leave Days:</div>
+                    <div class="col-6 fw-semibold text-danger">{{ attendance.unpaid_leave_days }} days</div>
+
+                    <div class="col-6 text-muted">Overtime Logged:</div>
+                    <div class="col-6 fw-semibold text-primary">{{ attendance.overtime_hours }} hours</div>
+                </div>
+                {% else %}
+                <div class="text-muted small py-3">
+                    <i class="bi bi-info-circle me-1"></i> Standard working days verified during payroll calculation.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Components Breakdown Table (INR ₹) -->
+    <div class="row g-4 mb-4">
+        <!-- Earnings Breakdown -->
+        <div class="col-md-6">
+            <div class="card border rounded-3 overflow-hidden h-100">
+                <div class="card-header bg-success-subtle text-success fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-plus-circle me-1"></i> Earnings &amp; Allowances</span>
+                    <span class="fs-xs text-uppercase">Credit (INR)</span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Basic Salary (Snapshot)</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-main">{{ payroll.basic_pay|inr }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Monthly Allowances Pool</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-success">+{{ payroll.allowances_total|inr }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Overtime Compensation</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-success">+{{ payroll.overtime_pay|inr }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="border-top table-light">
+                            <tr>
+                                <th class="ps-3 py-2 fw-bold text-main">Total Gross Salary</th>
+                                <th class="pe-3 py-2 text-end fw-bold text-success fs-6">{{ payroll.gross_pay|inr }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deductions Breakdown -->
+        <div class="col-md-6">
+            <div class="card border rounded-3 overflow-hidden h-100">
+                <div class="card-header bg-danger-subtle text-danger fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-dash-circle me-1"></i> Deductions &amp; Recoveries</span>
+                    <span class="fs-xs text-uppercase">Debit (INR)</span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Unpaid Leave Deduction</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-danger">-{{ payroll.leave_deduction|inr }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Other Fixed Deductions</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-danger">-{{ payroll.other_deductions|inr }}</td>
+                            </tr>
+                            {% if payroll.tax_deduction and payroll.tax_deduction > 0 %}
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Withholding Tax</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-danger">-{{ payroll.tax_deduction|inr }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if payroll.pf_deduction and payroll.pf_deduction > 0 %}
+                            <tr>
+                                <td class="ps-3 py-2 text-main">Provident Fund</td>
+                                <td class="pe-3 py-2 text-end fw-semibold text-danger">-{{ payroll.pf_deduction|inr }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                        <tfoot class="border-top table-light">
+                            <tr>
+                                <th class="ps-3 py-2 fw-bold text-main">Total Deductions</th>
+                                <th class="pe-3 py-2 text-end fw-bold text-danger fs-6">-{{ payroll.total_deductions|inr }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Net Salary Disbursement Banner (INR ₹) -->
+    <div class="p-4 rounded-3 bg-success-subtle border border-success-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+        <div>
+            <span class="text-success text-uppercase fw-bold fs-xs tracking-wider d-block">Official Net Salary Disbursed</span>
+            <span class="text-muted small">Total compensation credited to employee account</span>
+        </div>
+        <div class="text-sm-end">
+            <span class="h1 fw-extrabold text-success mb-0 font-monospace" id="slipNetPay">
+                {{ payroll.net_pay|inr }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Payment Confirmation Voucher Details (if available) -->
+    <div class="p-3 bg-body-tertiary rounded-3 border mb-4 small">
+        <h6 class="fw-bold text-uppercase text-muted fs-xs mb-2 border-bottom pb-1">
+            <i class="bi bi-bank me-1"></i> Payment &amp; Settlement Details
+        </h6>
+        {% if payment %}
+            <div class="row g-2">
+                <div class="col-sm-3 text-muted">Payment Status:</div>
+                <div class="col-sm-3 fw-bold text-success">{{ payment.status }}</div>
+
+                <div class="col-sm-3 text-muted">Payment Method:</div>
+                <div class="col-sm-3 fw-semibold text-main">{{ payment.payment_method.replace('_', ' ').title() }}</div>
+
+                <div class="col-sm-3 text-muted">Payment Date:</div>
+                <div class="col-sm-3 text-main">{{ payment.payment_date }}</div>
+
+                <div class="col-sm-3 text-muted">Transaction Ref:</div>
+                <div class="col-sm-3 font-monospace fw-semibold">{{ payment.payment_reference }}</div>
+            </div>
+        {% else %}
+            <div class="text-muted">
+                <i class="bi bi-hourglass-split me-1"></i> Payment disbursement is currently pending recording.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Signatures & Authorization -->
+    <div class="row pt-4 mt-4 border-top">
+        <div class="col-6">
+            <div class="text-muted small mb-4">Employee Signature:</div>
+            <div style="border-bottom: 1px solid #cbd5e1; width: 75%;"></div>
+        </div>
+        <div class="col-6 text-end">
+            <div class="text-muted small mb-4">Finance Manager Authorization:</div>
+            <div class="d-inline-block text-start" style="border-bottom: 1px solid #cbd5e1; width: 75%;"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .d-print-none, .sidebar, .navbar-custom, footer {
+        display: none !important;
+    }
+    .app-main {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    #printableSalarySlipDoc {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+}
+</style>
+{% endblock %}
